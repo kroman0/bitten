@@ -190,8 +190,8 @@ class ParsedElement(object):
 
     def __init__(self, node):
         self._node = node
-        self.attr = dict([(name.encode(), value.encode()) for name, value
-                          in node.attributes.items()])
+        self.attr = dict([(name.encode('utf-8'), value.encode('utf-8'))
+                          for name, value in node.attributes.items()])
 
     name = property(fget=lambda self: self._node.localName)
     namespace = property(fget=lambda self: self._node.namespaceURI)
@@ -215,7 +215,8 @@ class ParsedElement(object):
         This concatenates the values of all text nodes that are immediate
         children of this element.
         """
-        return ''.join([c.nodeValue or '' for c in self._node.childNodes])
+        return ''.join([c.nodeValue.encode('utf-8')
+                        for c in self._node.childNodes if c.nodeType == 3])
 
     def write(self, out, newlines=False):
         """Serializes the element and writes the XML to the given output
