@@ -83,8 +83,9 @@ class Context(object):
         self.output.append((Recipe.REPORT, category, self.generator, xml_elem))
 
     def report_file(self, category=None, file_=None):
+        filename = self.resolve(file_)
         try:
-            fileobj = file(self.resolve(file_), 'r')
+            fileobj = file(filename, 'r')
             try:
                 xml_elem = xmlio.Fragment()
                 for child in xmlio.parse(fileobj).children():
