@@ -103,8 +103,8 @@ class CommandLine(object):
                     os.chdir(old_cwd)
 
             for out_line, err_line in self._combine(out_lines, err_lines):
-                yield out_line and out_line.rstrip(), \
-                      err_line and err_line.rstrip()
+                yield out_line and out_line.rstrip().replace('\x00', ''), \
+                      err_line and err_line.rstrip().replace('\x00', '')
 
     else: # posix
 
