@@ -88,9 +88,9 @@ class BuildConfigController(Component):
     def get_navigation_items(self, req):
         if not req.perm.has_permission('BUILD_VIEW'):
             return
-        yield 'mainnav', 'build', \
-              '<a href="%s" accesskey="5">Build Status</a>' \
-              % self.env.href.build()
+        yield ('mainnav', 'build',
+               Markup('<a href="%s" accesskey="5">Build Status</a>',
+                      self.env.href.build()))
 
     # IRequestHandler methods
 
