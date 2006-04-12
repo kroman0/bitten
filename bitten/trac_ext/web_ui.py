@@ -697,8 +697,9 @@ class BuildController(Component):
         for report in Report.select(self.env, build=build.id, step=step.name):
             summarizer = summarizers.get(report.category)
             if summarizer:
-                summary = summarizer.render_summary(req, config, build, step,
-                                                    report.category)
+                summary = Markup(summarizer.render_summary(req, config,
+                                                           build, step,
+                                                           report.category))
             else:
                 summary = None
             reports.append({'category': report.category, 'summary': summary})
