@@ -38,7 +38,7 @@ setup(
     package_data = {
         'bitten': ['htdocs/*.*',
                    'htdocs/charts_library/*.swf',
-                   'templates/*.cs']
+                   'templates/*.html']
     },
     test_suite = 'bitten.tests.suite',
     entry_points = {
