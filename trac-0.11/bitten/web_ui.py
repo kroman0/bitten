@@ -26,7 +26,8 @@ from trac.util import escape, pretty_timedelta, format_datetime, shorten_line, \
 from trac.util.html import html
 from trac.web import IRequestHandler
 from trac.web.chrome import INavigationContributor, ITemplateProvider, \
-                            add_link, add_stylesheet
+                            add_link, add_stylesheet, add_ctxtnav, \
+                            prevnext_nav, add_script
 from trac.wiki import wiki_to_html, wiki_to_oneliner
 from bitten.api import ILogFormatter, IReportChartGenerator, IReportSummarizer
 from bitten.model import BuildConfig, TargetPlatform, Build, BuildStep, \
@@ -38,30 +39,30 @@ _status_label = {Build.PENDING: 'pending',
                  Build.SUCCESS: 'completed',
                  Build.FAILURE: 'failed'}
 
-def _build_to_hdf(env, req, build):
-    hdf = {'id': build.id, 'name': build.slave, 'rev': build.rev,
-           'status': _status_label[build.status],
-           'cls': _status_label[build.status].replace(' ', '-'),
-           'href': req.href.build(build.config, build.id),
-           'chgset_href': req.href.changeset(build.rev)}
+def _get_build_data(env, req, build):
+    data = {'id': build.id, 'name': build.slave, 'rev': build.rev,
+            'status': _status_label[build.status],
+            'cls': _status_label[build.status].replace(' ', '-'),
+            'href': req.href.build(build.config, build.id),
+            'chgset_href': req.href.changeset(build.rev)}
     if build.started:
-        hdf['started'] = format_datetime(build.started)
-        hdf['started_delta'] = pretty_timedelta(build.started)
-        hdf['duration'] = pretty_timedelta(build.started)
+        data['started'] = format_datetime(build.started)
+        data['started_delta'] = pretty_timedelta(build.started)
+        data['duration'] = pretty_timedelta(build.started)
     if build.stopped:
-        hdf['stopped'] = format_datetime(build.stopped)
-        hdf['stopped_delta'] = pretty_timedelta(build.stopped)
-        hdf['duration'] = pretty_timedelta(build.stopped, build.started)
-    hdf['slave'] = {
+        data['stopped'] = format_datetime(build.stopped)
+        data['stopped_delta'] = pretty_timedelta(build.stopped)
+        data['duration'] = pretty_timedelta(build.stopped, build.started)
+    data['slave'] = {
         'name': build.slave,
         'ipnr': build.slave_info.get(Build.IP_ADDRESS),
-        'os.name': build.slave_info.get(Build.OS_NAME),
-        'os.family': build.slave_info.get(Build.OS_FAMILY),
-        'os.version': build.slave_info.get(Build.OS_VERSION),
+        'os_name': build.slave_info.get(Build.OS_NAME),
+        'os_family': build.slave_info.get(Build.OS_FAMILY),
+        'os_version': build.slave_info.get(Build.OS_VERSION),
         'machine': build.slave_info.get(Build.MACHINE),
         'processor': build.slave_info.get(Build.PROCESSOR)
     }
-    return hdf
+    return data
 
 
 class BittenChrome(Component):
@@ -121,36 +122,37 @@ class BuildConfigController(Component):
         config = req.args.get('config')
 
         if config:
-            self._render_config(req, config)
+            data = self._render_config(req, config)
         elif view == 'inprogress':
-            self._render_inprogress(req)
+            data = self._render_inprogress(req)
         else:
-            self._render_overview(req)
+            data = self._render_overview(req)
 
         add_stylesheet(req, 'bitten/bitten.css')
-        return 'bitten_config.cs', None
+        return 'bitten_config.html', data, None
 
     # Internal methods
 
     def _render_overview(self, req):
-        req.hdf['title'] = 'Build Status'
+        data = {'title': 'Build Status'}
         show_all = False
         if req.args.get('show') == 'all':
             show_all = True
-        req.hdf['config.show_all'] = show_all
+        data['show_all'] = show_all
 
-        configs = BuildConfig.select(self.env, include_inactive=show_all)
-        for idx, config in enumerate(configs):
-            prefix = 'configs.%d' % idx
+        configs = []
+        for config in BuildConfig.select(self.env, include_inactive=show_all):
             description = config.description
             if description:
                 description = wiki_to_html(description, self.env, req)
-            req.hdf[prefix] = {
+            config_data = {
                 'name': config.name, 'label': config.label or config.name,
                 'active': config.active, 'path': config.path,
                 'description': description,
                 'href': req.href.build(config.name),
+                'builds': []
             }
+            configs.append(config_data)
             if not config.active:
                 continue
 
@@ -163,7 +165,7 @@ class BuildConfigController(Component):
                 if rev != prev_rev:
                     if prev_rev is None:
                         chgset = repos.get_changeset(rev)
-                        req.hdf[prefix + '.youngest_rev'] = {
+                        config_data['youngest_rev'] = {
                             'id': rev, 'href': req.href.changeset(rev),
                             'author': chgset.author or 'anonymous',
                             'date': format_datetime(chgset.date),
@@ -174,17 +176,21 @@ class BuildConfigController(Component):
                         break
                     prev_rev = rev
                 if build:
-                    build_hdf = _build_to_hdf(self.env, req, build)
-                    build_hdf['platform'] = platform.name
-                    req.hdf[prefix + '.builds.%d' % platform.id] = build_hdf
+                    build_data = _get_build_data(self.env, req, build)
+                    build_data['platform'] = platform.name
+                    config_data['builds'].append(build_data)
                 else:
-                    req.hdf[prefix + '.builds.%d' % platform.id] = {
+                    config_data['builds'].append({
                         'platform': platform.name, 'status': 'pending'
-                    }
+                    })
 
-        req.hdf['page.mode'] = 'overview'
+        data['configs'] = configs
+        data['page_mode'] = 'overview'
         add_link(req, 'views', req.href.build(view='inprogress'),
                  'In Progress Builds')
+        add_ctxtnav(req, 'In Progress Builds',
+                    req.href.build(view='inprogress'))
+        return data
 
     def _render_inprogress(self, req):
         req.hdf['title'] = 'In Progress Builds'
@@ -245,13 +251,14 @@ class BuildConfigController(Component):
         db = self.env.get_db_cnx()
 
         config = BuildConfig.fetch(self.env, config_name, db=db)
-        req.hdf['title'] = 'Build Configuration "%s"' \
-                           % config.label or config.name
+        data = {'title': 'Build Configuration "%s"' \
+                          % config.label or config.name,
+                'page_mode': 'view_config'}
         add_link(req, 'up', req.href.build(), 'Build Status')
         description = config.description
         if description:
             description = wiki_to_html(description, self.env, req)
-        req.hdf['config'] = {
+        data['config'] = {
             'name': config.name, 'label': config.label, 'path': config.path,
             'min_rev': config.min_rev,
             'min_rev_href': req.href.changeset(config.min_rev),
@@ -260,11 +267,10 @@ class BuildConfigController(Component):
             'active': config.active, 'description': description,
             'browser_href': req.href.browser(config.path)
         }
-        req.hdf['page.mode'] = 'view_config'
 
         platforms = list(TargetPlatform.select(self.env, config=config_name,
                                                db=db))
-        req.hdf['config.platforms'] = [
+        data['config']['platforms'] = [
             {'name': platform.name, 'id': platform.id} for platform in platforms
         ]
 
@@ -280,14 +286,14 @@ class BuildConfigController(Component):
                     chart_generators.append({
                         'href': req.href.build(config.name, 'chart/' + category) 
                     })
-            req.hdf['config.charts'] = chart_generators 
+            data['config']['charts'] = chart_generators 
             charts_license = self.config.get('bitten', 'charts_license')
             if charts_license:
-                req.hdf['config.charts_license'] = charts_license
+                data['config']['charts_license'] = charts_license
 
         page = max(1, int(req.args.get('page', 1)))
         more = False
-        req.hdf['page.number'] = page
+        data['page_number'] = page
 
         repos = self.env.get_repository(req.authname)
         if hasattr(repos, 'sync'):
@@ -295,28 +301,31 @@ class BuildConfigController(Component):
 
         builds_per_page = 12 * len(platforms)
         idx = 0
+        builds = {}
         for platform, rev, build in collect_changes(repos, config):
             if idx >= page * builds_per_page:
                 more = True
                 break
             elif idx >= (page - 1) * builds_per_page:
-                prefix = 'config.builds.%s' % rev
-                req.hdf[prefix + '.href'] = req.href.changeset(rev)
+                builds.setdefault(rev, {})
+                builds[rev].setdefault('href', req.href.changeset(rev))
                 if build and build.status != Build.PENDING:
-                    build_hdf = _build_to_hdf(self.env, req, build)
-                    req.hdf['%s.%s' % (prefix, platform.id)] = build_hdf
+                    build_data = _get_build_data(self.env, req, build)
+                    build_data['steps'] = []
                     for step in BuildStep.select(self.env, build=build.id,
                                                  db=db):
-                        req.hdf['%s.%s.steps.%s' % (prefix, platform.id,
-                                                    step.name)] = {
+                        build_data['steps'].append({
+                            'name': step.name,
                             'description': step.description,
                             'duration': datetime.fromtimestamp(step.stopped) - \
                                         datetime.fromtimestamp(step.started),
                             'failed': not step.successful,
                             'errors': step.errors,
-                            'href': build_hdf['href'] + '#step_' + step.name,
-                        }
+                            'href': build_data['href'] + '#step_' + step.name
+                        })
+                    builds[rev][platform.id] = build_data
             idx += 1
+        data['config']['builds'] = builds
 
         if page > 1:
             if page == 2:
@@ -327,6 +336,8 @@ class BuildConfigController(Component):
         if more:
             next_href = req.href.build(config.name, page=page + 1)
             add_link(req, 'next', next_href, 'Next Page')
+        prevnext_nav(req, 'Page')
+        return data
 
 
 class BuildController(Component):
@@ -372,11 +383,12 @@ class BuildController(Component):
                  'Build Configuration')
         status2title = {Build.SUCCESS: 'Success', Build.FAILURE: 'Failure',
                         Build.IN_PROGRESS: 'In Progress'}
-        req.hdf['title'] = 'Build %s - %s' % (build_id,
-                                              status2title[build.status])
-        req.hdf['page.mode'] = 'view_build'
+        data = {'title': 'Build %s - %s' % (build_id,
+                                            status2title[build.status]),
+                'page_mode': 'view_build',
+                'build': {}}
         config = BuildConfig.fetch(self.env, build.config, db=db)
-        req.hdf['build.config'] = {
+        data['build']['config'] = {
             'name': config.label,
             'href': req.href.build(config.name)
         }
@@ -390,7 +402,7 @@ class BuildController(Component):
             categories = summarizer.get_supported_categories()
             summarizers.update(dict([(cat, summarizer) for cat in categories]))
 
-        req.hdf['build'] = _build_to_hdf(self.env, req, build)
+        data['build'].update(_get_build_data(self.env, req, build))
         steps = []
         for step in BuildStep.select(self.env, build=build.id, db=db):
             steps.append({
@@ -402,15 +414,16 @@ class BuildController(Component):
                 'reports': self._render_reports(req, config, build, summarizers,
                                                 step)
             })
-        req.hdf['build.steps'] = steps
-        req.hdf['build.can_delete'] = req.perm.has_permission('BUILD_DELETE')
+        data['build']['steps'] = steps
+        data['build']['can_delete'] = req.perm.has_permission('BUILD_DELETE')
 
         repos = self.env.get_repository(req.authname)
         chgset = repos.get_changeset(build.rev)
-        req.hdf['build.chgset_author'] = chgset.author
+        data['build']['chgset_author'] = chgset.author
 
+        add_script(req, 'bitten/tabset.js')
         add_stylesheet(req, 'bitten/bitten.css')
-        return 'bitten_build.cs', None
+        return 'bitten_build.html', data, None
 
     # ITimelineEventProvider methods
 
