@@ -193,44 +193,46 @@ class BuildConfigController(Component):
         return data
 
     def _render_inprogress(self, req):
-        req.hdf['title'] = 'In Progress Builds'
+        data = {'title': 'In Progress Builds',
+                'page_mode': 'view-inprogress'}
 
         db = self.env.get_db_cnx()
 
-        configs = BuildConfig.select(self.env, include_inactive=False)
-        for idx, config in enumerate(configs):
+        configs = []
+        for config in BuildConfig.select(self.env, include_inactive=False):
+            self.log.debug(config.name)
             if not config.active:
                 continue
 
             in_progress_builds = Build.select(self.env, config=config.name,
                                               status=Build.IN_PROGRESS, db=db)
 
-            # sort correctly by revision.
-            builds = list(in_progress_builds)
-            builds.sort(lambda x, y: int(y.rev) - int(x.rev))
-            prefix = 'configs.%d' % idx
-
             current_builds = 0
-            for idx2, build in enumerate(builds):
-                prefix2 = '%s.builds.%d' % (prefix, idx2)
+            builds = []
+            # sort correctly by revision.
+            for build in sorted(in_progress_builds,
+                                cmp=lambda x, y: int(y.rev) - int(x.rev)):
                 rev = build.rev
-                req.hdf[prefix2] = _build_to_hdf(self.env, req, build)
-                req.hdf[prefix2 + '.rev'] = rev
-                req.hdf[prefix2 + '.rev_href'] = req.href.changeset(rev)
+                build_data = _get_build_data(self.env, req, build)
+                build_data['rev'] = rev
+                build_data['rev_href'] = req.href.changeset(rev)
                 platform = TargetPlatform.fetch(self.env, build.platform)
-                req.hdf[prefix2 + '.platform'] = platform.name
+                build_data['platform'] = platform.name
+                build_data['steps'] = []
 
                 for step in BuildStep.select(self.env, build=build.id, db=db):
-                    req.hdf['%s.steps.%s' % (prefix2, step.name)] = {
-                         'description': step.description,
-                         'duration': datetime.fromtimestamp(step.stopped) - \
-                                     datetime.fromtimestamp(step.started),
-                         'failed': not step.successful,
-                         'errors': step.errors,
-                         'href': req.hdf[prefix2 + '.href'] + '#step_' + step.name
-                    }
+                    build_data['steps'].append({
+                        'name': step.name,
+                        'description': step.description,
+                        'duration': datetime.fromtimestamp(step.stopped) - \
+                                    datetime.fromtimestamp(step.started),
+                        'failed': not step.successful,
+                        'errors': step.errors,
+                        'href': build_data['href'] + '#step_' + step.name
+                    })
 
-                current_builds = current_builds + 1
+                builds.append(build_data)
+                current_builds += 1
 
             if current_builds == 0: 
                 continue
@@ -238,14 +240,16 @@ class BuildConfigController(Component):
             description = config.description
             if description:
                 description = wiki_to_html(description, self.env, req)
-            req.hdf[prefix] = {
+            configs.append({
                 'name': config.name, 'label': config.label or config.name,
                 'active': config.active, 'path': config.path,
                 'description': description,
                 'href': req.href.build(config.name),
-            }
+                'builds': builds
+            })
 
-        req.hdf['page.mode'] = 'view_inprogress'
+        data['configs'] = configs
+        return data
 
     def _render_config(self, req, config_name):
         db = self.env.get_db_cnx()
