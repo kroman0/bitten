@@ -60,9 +60,9 @@
           <h3>Log</h3>
           <div class="log"><py:for each="item in step.log"><code class="$item.level">$item.message</code><br /></py:for></div>
         </div>
-        <div py:for="report in [r for r in step.reports if r.summary]"
-             class="tab report $report.type">
-          $report.summary
+        <div py:for="report in [r for r in step.reports if r.template]"
+             class="tab report $report.category">
+          <xi:include href="$report.template" py:with="data = report.data" />
         </div>
       </div>
       <script type="text/javascript">

@@ -534,12 +534,12 @@ class BuildController(Component):
         for report in Report.select(self.env, build=build.id, step=step.name):
             summarizer = summarizers.get(report.category)
             if summarizer:
-                summary = summarizer.render_summary(req, config, build, step,
-                                                    report.category)
+                tmpl, data = summarizer.render_summary(req, config, build,
+                                                        step, report.category)
             else:
-                summary = None
+                tmpl = data = None
             reports.append({'category': report.category,
-                            'summary': Markup(summary)})
+                            'template': tmpl, 'data': data})
         return reports
 
 
@@ -563,13 +563,13 @@ class ReportChartController(Component):
 
         for generator in self.generators:
             if category in generator.get_supported_categories():
-                template = generator.generate_chart_data(req, config,
-                                                         category)
+                tmpl, data = generator.generate_chart_data(req, config,
+                                                           category)
                 break
         else:
             raise TracError('Unknown report category "%s"' % category)
 
-        return template, 'text/xml'
+        return tmpl, data, 'text/xml'
 
 
 class SourceFileLinkFormatter(Component):
