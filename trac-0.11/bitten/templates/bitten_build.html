@@ -41,7 +41,7 @@
         <dt class="duration">Duration:</dt>
         <dd class="duration">$build.duration</dd>
       </dl>
-      <div py:if="can_delete" class="buttons">
+      <div py:if="build.can_delete" class="buttons">
         <form method="post" action=""><div>
           <input type="hidden" name="action" value="invalidate" />
           <input type="submit" value="Invalidate build" />

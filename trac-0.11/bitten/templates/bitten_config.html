@@ -74,12 +74,6 @@
         </py:otherwise></py:choose>
         </td>
       </tr></tbody></table></py:if></py:for>
-      <div py:if="can_create" class="buttons">
-        <form method="get" action=""><div>
-          <input type="hidden" name="action" value="new" />
-          <input type="submit" value="Add configuration" />
-        </div></form>
-      </div>
 
     </py:when><py:when test="'view_config'">
       <form py:if="config.can_modify" id="prefs" method="post"
@@ -124,17 +118,6 @@
                  value="library_path=${href.chrome('bitten')}&amp;xml_source=$chart.href${config.charts_license and '&amp;license='+config.charts_license or ''}" />
           <param name="wmode" value="transparent" />
         </object><br /></py:for>
-      </div>
-
-      <div py:if="config.can_modify or config.can_delete" class="buttons">
-        <form py:if="config.can_modify" method="get" action=""><div>
-          <input type="hidden" name="action" value="edit" />
-          <input type="submit" value="Edit configuration" />
-        </div></form>
-        <form py:if="config.can_delete" method="get" action=""><div>
-          <input type="hidden" name="action" value="delete" />
-          <input type="submit" value="Delete configuration" />
-        </div></form>
       </div>
 
       <table py:if="config.platforms and config.builds"

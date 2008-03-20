@@ -16,11 +16,9 @@ import re
 from StringIO import StringIO
 
 import pkg_resources
+from genshi.builder import tag
 from trac.core import *
-try:
-    from trac.timeline import ITimelineEventProvider
-except ImportError:
-    from trac.Timeline import ITimelineEventProvider
+from trac.timeline import ITimelineEventProvider
 from trac.util import escape, pretty_timedelta, format_datetime, shorten_line, \
                       Markup
 from trac.util.html import html
@@ -83,11 +81,9 @@ class BittenChrome(Component):
     def get_navigation_items(self, req):
         """Return the navigation item for access the build status overview from
         the Trac navigation bar."""
-        if not req.perm.has_permission('BUILD_VIEW'):
-            return
-        yield ('mainnav', 'build', \
-               Markup('<a href="%s" accesskey="5">Build Status</a>',
-                      req.href.build()))
+        if 'BUILD_VIEW' in req.perm:
+            yield ('mainnav', 'build',
+                   tag.a('Builds Status', href=req.href.build(), accesskey=5))
 
     # ITemplatesProvider methods
 
@@ -115,7 +111,7 @@ class BuildConfigController(Component):
             return True
 
     def process_request(self, req):
-        req.perm.assert_permission('BUILD_VIEW')
+        req.perm.require('BUILD_VIEW')
 
         action = req.args.get('action')
         view = req.args.get('view')
@@ -275,7 +271,8 @@ class BuildConfigController(Component):
         platforms = list(TargetPlatform.select(self.env, config=config_name,
                                                db=db))
         data['config']['platforms'] = [
-            {'name': platform.name, 'id': platform.id} for platform in platforms
+            {'name': platform.name, 'id': platform.id}
+            for platform in platforms
         ]
 
         has_reports = False
@@ -371,7 +368,7 @@ class BuildController(Component):
             return True
 
     def process_request(self, req):
-        req.perm.assert_permission('BUILD_VIEW')
+        req.perm.require('BUILD_VIEW')
 
         db = self.env.get_db_cnx()
         build_id = int(req.args.get('id'))
@@ -419,7 +416,7 @@ class BuildController(Component):
                                                 step)
             })
         data['build']['steps'] = steps
-        data['build']['can_delete'] = req.perm.has_permission('BUILD_DELETE')
+        data['build']['can_delete'] = ('BUILD_DELETE' in req.perm)
 
         repos = self.env.get_repository(req.authname)
         chgset = repos.get_changeset(build.rev)
@@ -432,7 +429,7 @@ class BuildController(Component):
     # ITimelineEventProvider methods
 
     def get_timeline_filters(self, req):
-        if req.perm.has_permission('BUILD_VIEW'):
+        if 'BUILD_VIEW' in req.perm:
             yield ('build', 'Builds')
 
     def get_timeline_events(self, req, start, stop, filters):
@@ -468,8 +465,8 @@ class BuildController(Component):
                     errors += [(step.name, error) for error
                                in step.errors]
 
-            title = Markup('Build of <em>%s [%s]</em> on %s %s', label, rev,
-                           platform, _status_label[status])
+            title = tag('Build of ', tag.em('%s [%s]' % (label, rev)),
+                        ' on %s %s' % (platform, _status_label[status]))
             message = ''
             if req.args.get('format') == 'rss':
                 href = req.abs_href.build(config, id)
@@ -610,7 +607,7 @@ class SourceFileLinkFormatter(Component):
             link = href(config.path, filepath)
             if m.group('line'):
                 link += '#L' + m.group('line')[1:]
-            return Markup(html.A(m.group(0), href=link))
+            return Markup(tag.a(m.group(0), href=link))
 
         def _formatter(step, type, level, message):
             buf = []
