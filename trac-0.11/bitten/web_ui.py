@@ -490,7 +490,7 @@ class BuildController(Component):
                     for step, error in errors:
                         if step not in steps:
                             steps.append(step)
-                    steps = [Markup('<em>%s</em>', step) for step in steps]
+                    steps = [Markup('<em>%s</em>') % step for step in steps]
                     if len(steps) < 2:
                         message = steps[0]
                     elif len(steps) == 2:
@@ -498,8 +498,9 @@ class BuildController(Component):
                     elif len(steps) > 2:
                         message = Markup(', ').join(steps[:-1]) + ', and ' + \
                                   steps[-1]
-                    message = Markup('Step%s %s failed',
-                                     len(steps) != 1 and 's' or '', message)
+                    message = Markup('Step%s %s failed') % (
+                        len(steps) != 1 and 's' or '', message
+                    )
             yield event_kinds[status], href, title, stopped, None, message
 
     # Internal methods
