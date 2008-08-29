@@ -39,7 +39,7 @@
  
     <div id="content" class="build">
       <h1>$title</h1><py:choose test="page_mode"><py:when test="'overview'">
-      <form id="prefs" method="get">
+      <form id="prefs" method="get" action="">
         <div>
           <input type="checkbox" id="showall" name="show" value="all"
                  checked="${show_all and 'checked' or None}" />
@@ -123,7 +123,7 @@
       <table py:if="config.platforms and config.builds"
              class="listing" id="builds">
         <thead><tr>
-          <th class="chgset" abbrev="Changeset">Chgset</th>
+          <th class="chgset"><abbr title="Changeset">Chgset</abbr></th>
           <th py:for="platform in config.platforms">$platform.name</th>
         </tr></thead>
         <tbody py:if="config.builds">

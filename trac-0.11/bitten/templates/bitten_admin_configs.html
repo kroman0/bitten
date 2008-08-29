@@ -11,7 +11,7 @@
   <body>
     <h2>Manage Build Configurations</h2>
     <py:choose><form py:when="config" class="mod"
-         id="modconfig" method="post">
+         id="modconfig" method="post" action="">
       <table class="form" summary=""><tr>
         <td class="name"><label>Name:<br />
           <input type="text" name="name"
@@ -47,18 +47,18 @@
         <legend>Repository Mapping</legend>
         <table class="form" summary=""><tr>
           <th><label for="path">Path:</label></th>
-          <td colspan="3"><input type="text" name="path"
+          <td colspan="3"><input id="path" type="text" name="path"
               size="48" value="$config.path" /></td>
         </tr><tr>
           <th><label for="min_rev">
             Oldest revision:
           </label></th>
-          <td><input type="text" name="min_rev" size="8"
+          <td><input id="min_rev" type="text" name="min_rev" size="8"
                      value="$config.min_rev" /></td>
-          <th><label for="min_rev">
+          <th><label for="max_rev">
             Youngest revision:
           </label></th>
-          <td><input type="text" name="max_rev" size="8"
+          <td><input id="max_rev" type="text" name="max_rev" size="8"
                      value="$config.max_rev" /></td>
         </tr></table>
       </fieldset>
@@ -75,6 +75,9 @@
             <th>Name</th><th>Rules</th></tr>
           </thead>
           <tbody>
+            <tr py:if="not config.platforms">
+              <td colspan="3"><em>(No Platforms)</em></td>
+            </tr>
             <tr py:for="platform in config.platforms">
               <td class="sel">
                 <input type="checkbox" name="sel"
@@ -106,7 +109,7 @@
     </form>
 
     <form py:when="platform" class="mod" id="modplatform"
-          method="post">
+          method="post" action="">
       <div class="field"><label>Target Platform:
         <input type="text" name="name"
                value="$platform.name" />
@@ -177,7 +180,7 @@
     </form>
 
     <py:otherwise><form class="addnew" id="addcomp"
-                        method="post"><fieldset>
+                        method="post" action=""><fieldset>
       <legend>Add Configuration:</legend>
       <table summary=""><tr>
         <td class="name"><div  
@@ -200,12 +203,15 @@
       </div>
     </fieldset></form>
 
-    <form method="POST">
+    <form method="post" action="">
       <table class="listing" id="configlist">
         <thead>
           <tr><th class="sel">&nbsp;</th><th>Name</th>
           <th>Path</th><th>Active</th></tr>
         </thead><tbody>
+        <tr py:if="not configs">
+          <td colspan="4"><em>(No Build Configurations)</em></td>
+        </tr>
         <tr py:for="config in configs">
           <td class="sel">
             <input type="checkbox" name="sel"
