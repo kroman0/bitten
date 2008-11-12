@@ -259,7 +259,7 @@ class FigleafTestCase(unittest.TestCase):
         child = xml.children[0]
         self.assertEqual('coverage', child.name)
         self.assertEqual('test.module', child.attr['name'])
-        self.assertEqual('test/module.py', child.attr['file'])
+        self.assertEqual(os.path.join('test', 'module.py'), child.attr['file'])
         self.assertEqual(75, child.attr['percentage'])
         self.assertEqual(4, child.attr['lines'])
         self.assertEqual('1 0 - 1 1', child.attr['line_hits'])
@@ -284,7 +284,7 @@ class FigleafTestCase(unittest.TestCase):
         child = xml.children[0]
         self.assertEqual('coverage', child.name)
         self.assertEqual('test.module', child.attr['name'])
-        self.assertEqual('test/module.py', child.attr['file'])
+        self.assertEqual(os.path.join('test', 'module.py'), child.attr['file'])
         self.assertEqual(0, child.attr['percentage'])
         self.assertEqual(5, child.attr['lines'])
 

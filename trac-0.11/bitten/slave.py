@@ -26,6 +26,10 @@ from bitten.build.config import Configuration
 from bitten.recipe import Recipe
 from bitten.util import xmlio
 
+EX_OK = getattr(os, "EX_OK", 0)
+EX_UNAVAILABLE = getattr(os, "EX_UNAVAILABLE", 69)
+EX_PROTOCOL = getattr(os, "EX_PROTOCOL", 76)
+
 __all__ = ['BuildSlave', 'ExitSlave']
 __docformat__ = 'restructuredtext en'
 
@@ -68,15 +72,16 @@ class SaneHTTPRequest(urllib2.Request):
 class BuildSlave(object):
     """BEEP initiator implementation for the build slave."""
 
-    def __init__(self, url, name=None, config=None, dry_run=False,
+    def __init__(self, urls, name=None, config=None, dry_run=False,
                  work_dir=None, build_dir="build_${build}",
                  keep_files=False, single_build=False,
                  poll_interval=300, username=None, password=None,
                  dump_reports=False):
         """Create the build slave instance.
         
-        :param url: the URL of the build master, or the path to a build recipe
-                    file
+        :param urls: a list of URLs of the build masters to connect to, or a
+                     single-element list containing the path to a build recipe
+                     file
         :param name: the name with which this slave should identify itself
         :param config: the path to the slave configuration file
         :param dry_run: wether the build outcome should not be reported back
@@ -97,8 +102,9 @@ class BuildSlave(object):
                              standard output, in addition to being transmitted
                              to the build master
         """
-        self.url = url
-        self.local = not url.startswith('http') and not url.startswith('https')
+        self.urls = urls
+        self.local = len(urls) == 1 and not urls[0].startswith('http://') \
+                                    and not urls[0].startswith('https://')
         if name is None:
             name = platform.node().split('.', 1)[0].lower()
         self.name = name
@@ -120,7 +126,7 @@ class BuildSlave(object):
             password_mgr = urllib2.HTTPPasswordMgrWithDefaultRealm()
             if username and password:
                 log.debug('Enabling authentication with username %r', username)
-                password_mgr.add_password(None, url, username, password)
+                password_mgr.add_password(None, urls, username, password)
             self.opener.add_handler(urllib2.HTTPBasicAuthHandler(password_mgr))
             self.opener.add_handler(urllib2.HTTPDigestAuthHandler(password_mgr))
 
@@ -137,23 +143,27 @@ class BuildSlave(object):
 
     def run(self):
         if self.local:
-            fileobj = open(self.url)
+            fileobj = open(self.urls[0])
             try:
                 self._execute_build(None, fileobj)
             finally:
                 fileobj.close()
-            return os.EX_OK
+            return EX_OK
 
+        urls = []
         while True:
+            if not urls:
+                urls[:] = self.urls
+            url = urls.pop(0)
             try:
                 try:
-                    job_done = self._create_build()
+                    job_done = self._create_build(url)
                     if job_done:
                         continue
                 except urllib2.HTTPError, e:
                     # HTTPError doesn't have the "reason" attribute of URLError
                     log.error(e)
-                    raise ExitSlave(os.EX_UNAVAILABLE)
+                    raise ExitSlave(EX_UNAVAILABLE)
                 except urllib2.URLError, e:
                     # Is this a temporary network glitch or something a bit
                     # more severe?
@@ -162,16 +172,16 @@ class BuildSlave(object):
                         log.warning(e)
                     else:
                         log.error(e)
-                        raise ExitSlave(os.EX_UNAVAILABLE)
+                        raise ExitSlave(EX_UNAVAILABLE)
             except ExitSlave, e:
                 return e.exit_code
             time.sleep(self.poll_interval)
 
     def quit(self):
         log.info('Shutting down')
-        raise ExitSlave(os.EX_OK)
+        raise ExitSlave(EX_OK)
 
-    def _create_build(self):
+    def _create_build(self, url):
         xml = xmlio.Element('slave', name=self.name)[
             xmlio.Element('platform', processor=self.config['processor'])[
                 self.config['machine']
@@ -188,7 +198,7 @@ class BuildSlave(object):
 
         body = str(xml)
         log.debug('Sending slave configuration: %s', body)
-        resp = self.request('POST', self.url, body, {
+        resp = self.request('POST', url, body, {
             'Content-Length': len(body),
             'Content-Type': 'application/x-bitten+xml'
         })
@@ -201,7 +211,7 @@ class BuildSlave(object):
             return False
         else:
             log.error('Unexpected response (%d %s)', resp.code, resp.msg)
-            raise ExitSlave(os.EX_PROTOCOL)
+            raise ExitSlave(EX_PROTOCOL)
 
     def _initiate_build(self, build_url):
         log.info('Build pending at %s', build_url)
@@ -211,7 +221,7 @@ class BuildSlave(object):
                 self._execute_build(build_url, resp)
             else:
                 log.error('Unexpected response (%d): %s', resp.code, resp.msg)
-                self._cancel_build(build_url, exit_code=os.EX_PROTOCOL)
+                self._cancel_build(build_url, exit_code=EX_PROTOCOL)
         except KeyboardInterrupt:
             log.warning('Build interrupted')
             self._cancel_build(build_url)
@@ -242,7 +252,7 @@ class BuildSlave(object):
                 _rmtree(basedir)
             if self.single_build:
                 log.info('Exiting after single build completed.')
-                raise ExitSlave(os.EX_OK)
+                raise ExitSlave(EX_OK)
 
     def _execute_step(self, build_url, recipe, step):
         failed = False
@@ -290,7 +300,7 @@ class BuildSlave(object):
 
         return not failed or step.onerror != 'fail'
 
-    def _cancel_build(self, build_url, exit_code=os.EX_OK):
+    def _cancel_build(self, build_url, exit_code=EX_OK):
         log.info('Cancelling build at %s', build_url)
         if not self.local:
             resp = self.request('DELETE', build_url)
@@ -313,7 +323,7 @@ def main():
     from bitten import __version__ as VERSION
     from optparse import OptionParser
 
-    parser = OptionParser(usage='usage: %prog [options] url',
+    parser = OptionParser(usage='usage: %prog [options] url1 [url2] ...',
                           version='%%prog %s' % VERSION)
     parser.add_option('--name', action='store', dest='name',
                       help='name of this slave (defaults to host name)')
@@ -358,7 +368,7 @@ def main():
 
     if len(args) < 1:
         parser.error('incorrect number of arguments')
-    url = args[0]
+    urls = args
 
     logger = logging.getLogger('bitten')
     logger.setLevel(options.loglevel)
@@ -375,7 +385,7 @@ def main():
         handler.setFormatter(formatter)
         logger.addHandler(handler)
 
-    slave = BuildSlave(url, name=options.name, config=options.config,
+    slave = BuildSlave(urls, name=options.name, config=options.config,
                        dry_run=options.dry_run, work_dir=options.work_dir,
                        build_dir=options.build_dir,
                        keep_files=options.keep_files,
