@@ -201,6 +201,81 @@ def cppunit(ctxt, file_=None, srcdir=None):
         print e
         log.warning('Error parsing CppUnit results file (%s)', e)
 
+def cunit (ctxt, file_=None, srcdir=None):
+    """Collect CUnit XML data.
+    
+    :param ctxt: the build context
+    :type ctxt: `Context`
+    :param file\_: path of the file containing the CUnit results; may contain
+                  globbing wildcards to match multiple files
+    :param srcdir: name of the directory containing the source files, used to
+                   link the test results to the corresponding files
+    """
+    assert file_, 'Missing required attribute "file"'
+
+    try:
+        fileobj = file(ctxt.resolve(file_), 'r')
+        try:
+            total, failed = 0, 0
+            results = xmlio.Fragment()
+            log_elem = xmlio.Fragment()
+            def info (msg):
+                log.info (msg)
+                log_elem.append (xmlio.Element ('message', level='info')[msg])
+            def warning (msg):
+                log.warning (msg)
+                log_elem.append (xmlio.Element ('message', level='warning')[msg])
+            def error (msg):
+                log.error (msg)
+                log_elem.append (xmlio.Element ('message', level='error')[msg])
+            for node in xmlio.parse(fileobj):
+                if node.name != 'CUNIT_RESULT_LISTING':
+                    continue
+                for suiteRun in node.children ('CUNIT_RUN_SUITE'):
+                    for suite in suiteRun.children():
+                        if suite.name not in ('CUNIT_RUN_SUITE_SUCCESS', 'CUNIT_RUN_SUITE_FAILURE'):
+                            warning ("Unknown node: %s" % suite.name)
+                            continue
+                        suiteName = suite.children ('SUITE_NAME').next().gettext()
+                        info ("%s [%s]" % ("*" * (57 - len (suiteName)), suiteName))
+                        for record in suite.children ('CUNIT_RUN_TEST_RECORD'):
+                            for result in record.children():
+                                if result.name not in ('CUNIT_RUN_TEST_SUCCESS', 'CUNIT_RUN_TEST_FAILURE'):
+                                    continue
+                                testName = result.children ('TEST_NAME').next().gettext()
+                                info ("Running %s..." % testName);
+                                test = xmlio.Element('test')
+                                test.attr['fixture'] = suiteName
+                                test.attr['name'] = testName
+                                if result.name == 'CUNIT_RUN_TEST_FAILURE':
+                                    error ("%s(%d): %s"
+                                               % (result.children ('FILE_NAME').next().gettext(),
+                                                  int (result.children ('LINE_NUMBER').next().gettext()),
+                                                  result.children ('CONDITION').next().gettext()))
+                                    test.attr['status'] = 'failure'
+                                    failed += 1
+                                else:
+                                    test.attr['status'] = 'success'
+
+                                results.append(test)
+                                total += 1
+
+            if failed:
+                ctxt.error('%d of %d test%s failed' % (failed, total,
+                           total != 1 and 's' or ''))
+
+            ctxt.report('test', results)
+            ctxt.log (log_elem)
+
+        finally:
+            fileobj.close()
+
+    except IOError, e:
+        log.warning('Error opening CUnit results file (%s)', e)
+    except xmlio.ParseError, e:
+        print e
+        log.warning('Error parsing CUnit results file (%s)', e)
+
 def gcov(ctxt, include=None, exclude=None, prefix=None):
     """Run ``gcov`` to extract coverage data where available.
     
