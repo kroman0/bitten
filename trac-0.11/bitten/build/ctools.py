@@ -276,7 +276,7 @@ def cunit (ctxt, file_=None, srcdir=None):
         print e
         log.warning('Error parsing CUnit results file (%s)', e)
 
-def gcov(ctxt, include=None, exclude=None, prefix=None):
+def gcov(ctxt, include=None, exclude=None, prefix=None, root=""):
     """Run ``gcov`` to extract coverage data where available.
     
     :param ctxt: the build context
@@ -285,8 +285,10 @@ def gcov(ctxt, include=None, exclude=None, prefix=None):
     :param exclude: patterns of files and directories that should be excluded
     :param prefix: optional prefix name that is added to object files by the
                    build system
+    :param root: optional root path in which the build system puts the object
+                 files
     """
-    file_re = re.compile(r'^File \`(?P<file>[^\']+)\'\s*$')
+    file_re = re.compile(r'^File (?:\'|\`)(?P<file>[^\']+)\'\s*$')
     lines_re = re.compile(r'^Lines executed:(?P<cov>\d+\.\d+)\% of (?P<num>\d+)\s*$')
 
     files = []
@@ -295,24 +297,35 @@ def gcov(ctxt, include=None, exclude=None, prefix=None):
             files.append(filename)
 
     coverage = xmlio.Fragment()
+    log_elem = xmlio.Fragment()
+    def info (msg):
+        log.info (msg)
+        log_elem.append (xmlio.Element ('message', level='info')[msg])
+    def warning (msg):
+        log.warning (msg)
+        log_elem.append (xmlio.Element ('message', level='warning')[msg])
+    def error (msg):
+        log.error (msg)
+        log_elem.append (xmlio.Element ('message', level='error')[msg])
 
     for srcfile in files:
         # Determine the coverage for each source file by looking for a .gcno
         # and .gcda pair
+        info ("Getting coverage info for %s" % srcfile)
         filepath, filename = os.path.split(srcfile)
         stem = os.path.splitext(filename)[0]
         if prefix is not None:
             stem = prefix + '-' + stem
 
-        objfile = os.path.join(filepath, stem + '.o')
+        objfile = os.path.join (root, filepath, stem + '.o')
         if not os.path.isfile(ctxt.resolve(objfile)):
-            log.warn('No object file found for %s at %s', srcfile, objfile)
+            warning ('No object file found for %s at %s' % (srcfile, objfile))
             continue
-        if not os.path.isfile(ctxt.resolve(stem + '.gcno')):
-            log.warn('No .gcno file found for %s', srcfile)
+        if not os.path.isfile (ctxt.resolve (os.path.join (root, filepath, stem + '.gcno'))):
+            warning ('No .gcno file found for %s at %s' % (srcfile, os.path.join (root, filepath, stem + '.gcno')))
             continue
-        if not os.path.isfile(ctxt.resolve(stem + '.gcda')):
-            log.warn('No .gcda file found for %s', srcfile)
+        if not os.path.isfile (ctxt.resolve (os.path.join (root, filepath, stem + '.gcda'))):
+            warning ('No .gcda file found for %s at %s' % (srcfile, os.path.join (root, filepath, stem + '.gcda')))
             continue
 
         num_lines, num_covered = 0, 0
@@ -349,3 +362,4 @@ def gcov(ctxt, include=None, exclude=None, prefix=None):
         coverage.append(module)
 
     ctxt.report('coverage', coverage)
+    ctxt.log (log_elem)
