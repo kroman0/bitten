@@ -56,7 +56,7 @@ recipe_commands = [
         NS + 'xml#transform = bitten.build.xmltools:transform'
     ]
 shared_args = {
-        'version': '0.6',
+        'version': '0.6b1',
         'author': 'Edgewall Software',
         'author_email': 'info@edgewall.org',
         'license': 'BSD',
