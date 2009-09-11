@@ -110,7 +110,7 @@ else:
 
 setup(
     name = 'BittenSlave',
-    version =  '0.7',
+    version =  '0.6b2',
     author = 'Edgewall Software',
     author_email = 'info@edgewall.org',
     license = 'BSD',
