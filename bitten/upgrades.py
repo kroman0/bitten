@@ -385,7 +385,7 @@ def migrate_logs_to_files(env, db):
         full_filename = os.path.join(logs_dir, filename)
         message_file = codecs.open(full_filename, "wb", "UTF-8")
         # Note: the original version of this code erroneously wrote to filename + ".level" instead of ".levels", producing unused level files
-        level_file = codecs.open(full_filename + BuildLog.LEVELS_SUFFIX, "wb", "UTF-8")
+        level_file = codecs.open(full_filename + '.levels', "wb", "UTF-8")
         for message, level in message_cursor.fetchall() or []:
             message_file.write(to_unicode(message) + "\n")
             level_file.write(to_unicode(level) + "\n")
@@ -402,6 +402,54 @@ def migrate_logs_to_files(env, db):
     cursor.execute("DROP TABLE bitten_log_message")
     cursor.close()
     env.log.warning("We have dropped the bitten_log_message table - you may want to vaccuum/compress your database to save space")
+
+def fix_log_levels_misnaming(env, db):
+    """Renames or removes *.log.level files created by older versions of migrate_logs_to_files."""
+    logs_dir = env.config.get("bitten", "logs_dir", "log/bitten")
+    if not os.path.isabs(logs_dir):
+        logs_dir = os.path.join(env.path, logs_dir)
+    if not os.path.isdir(logs_dir):
+        return
+
+    rename_count = 0
+    rename_error_count = 0
+    delete_count = 0
+    delete_error_count = 0
+
+    for wrong_filename in os.listdir(logs_dir):
+        if not wrong_filename.endswith('.log.level'):
+            continue
+
+        log_filename = os.path.splitext(wrong_filename)[0]
+        right_filename = log_filename + '.levels'
+        full_log_filename = os.path.join(logs_dir, log_filename)
+        full_wrong_filename = os.path.join(logs_dir, wrong_filename)
+        full_right_filename = os.path.join(logs_dir, right_filename)
+
+        if not os.path.exists(full_log_filename):
+            try:
+                os.remove(full_wrong_filename)
+                delete_count += 1
+                env.log.info("Deleted stray log level file %s", wrong_filename)
+            except Exception, e:
+                delete_error_count += 1
+                env.log.warning("Error removing stray log level file %s: %s", wrong_filename, e)
+        else:
+            if os.path.exists(full_right_filename):
+                env.log.warning("Error renaming %s to %s in fix_log_levels_misnaming: new filename already exists",
+                    full_wrong_filename, full_right_filename)
+                rename_error_count += 1
+                continue
+            try:
+                os.rename(full_wrong_filename, full_right_filename)
+                rename_count += 1
+                env.log.info("Renamed incorrectly named log level file %s to %s", wrong_filename, right_filename)
+            except Exception, e:
+                env.log.warning("Error renaming %s to %s in fix_log_levels_misnaming: %s", full_wrong_filename, full_right_filename, e)
+                rename_error_count += 1
+
+    env.log.info("Renamed %d incorrectly named log level files from previous migrate (%d errors)", rename_count, rename_error_count)
+    env.log.info("Deleted %d stray log level (%d errors)", delete_count, delete_error_count)
 
 def recreate_rule_with_int_id(env, db):
         """Recreates the bitten_rule table with an integer id column rather than a text one."""
@@ -483,4 +531,5 @@ map = {
     8: [add_filename_to_logs,migrate_logs_to_files],
     9: [recreate_rule_with_int_id],
    10: [add_config_platform_rev_index_to_build, fix_sequences],
+   11: [fix_log_levels_misnaming],
 }
