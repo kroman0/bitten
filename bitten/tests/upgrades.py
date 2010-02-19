@@ -8,6 +8,7 @@
 # are also available at http://bitten.edgewall.org/wiki/License.
 
 import unittest
+import logging
 
 import warnings
 warnings.filterwarnings('ignore', '^Unknown table')
@@ -37,12 +38,13 @@ class BaseUpgradeTestCase(unittest.TestCase):
             # upgrades._parse_scheme()
             self.env.config.set('trac', 'database', self.env.dburi)
         self.env.path = tempfile.mkdtemp()
-        logs_dir = self.env.config.get("bitten", "logs_dir")
+        logs_dir = self.env.config.get("bitten", "logs_dir", "log/bitten")
         if os.path.isabs(logs_dir):
             raise ValueError("Should not have absolute logs directory for temporary test")
         logs_dir = os.path.join(self.env.path, logs_dir)
         if not os.path.isdir(logs_dir):
             os.makedirs(logs_dir)
+        self.logs_dir = logs_dir
 
         db = self.env.get_db_cnx()
         cursor = db.cursor()
@@ -60,7 +62,18 @@ class BaseUpgradeTestCase(unittest.TestCase):
 
     def tearDown(self):
         shutil.rmtree(self.env.path)
+        del self.logs_dir
         del self.env
+
+
+class LogWatcher(logging.Handler):
+
+    def __init__(self, level=0):
+        logging.Handler.__init__(self, level=0)
+        self.records = []
+
+    def emit(self, record):
+        self.records.append(record)
 
 
 class UpgradeHelperTestCase(BaseUpgradeTestCase):
@@ -272,6 +285,57 @@ class UpgradeScriptsTestCase(BaseUpgradeTestCase):
         rows = cursor.fetchall()
         self.assertEqual(rows, [(str(model.schema_version),)])
 
+    def test_fix_log_levels_misnaming(self):
+
+        logfiles = {
+            "1.log": "",
+            "2.log": "",
+            "3.log": "",
+            "1.log.level": "info\n",
+            "2.log.levels": "info\ninfo\n",
+            "3.log.level": "warn\n",
+            "3.log.levels": "warn\nwarn\n",
+            "4.log.level": "error\n",
+        }
+        expected_deletions = [
+            "4.log.level",
+        ]
+
+        for filename, data in logfiles.items():
+            path = os.path.join(self.logs_dir, filename)
+            logfile = open(path, "w")
+            logfile.write(data)
+            logfile.close()
+
+        logwatch = LogWatcher(logging.INFO)
+        self.env.log.setLevel(logging.INFO)
+        self.env.log.addHandler(logwatch)
+
+        upgrades.fix_log_levels_misnaming(self.env, None)
+
+        filenames = sorted(os.listdir(self.logs_dir))
+        for filename in filenames:
+            path = os.path.join(self.logs_dir, filename)
+            origfile = filename in logfiles and filename or filename.replace("levels", "level")
+            self.assertEqual(logfiles[origfile], open(path).read())
+
+        self.assertEqual(len(filenames), len(logfiles) - len(expected_deletions))
+
+        warns = [rec for rec in logwatch.records if rec.levelname == 'WARNING']
+        self.assertEqual(len(warns), 1)
+        for warn in warns:
+            self.assertTrue(warn.getMessage().startswith("Error renaming"))
+
+        infos = [rec for rec in logwatch.records if rec.levelname == 'INFO']
+        self.assertEqual(len(infos), 4)
+        for info in infos[:1]:
+            self.assertTrue(info.getMessage().startswith("Renamed incorrectly named log level file"))
+        self.assertTrue(infos[1].getMessage().startswith(
+            "Deleted stray log level file 4.log.level"))
+        self.assertTrue(infos[2].getMessage().startswith(
+            "Renamed 1 incorrectly named log level files from previous migrate (1 errors)"))
+        self.assertTrue(infos[3].getMessage().startswith(
+            "Deleted 1 stray log level (0 errors)"))
 
 def suite():
     suite = unittest.TestSuite()
