@@ -451,6 +451,36 @@ def fix_log_levels_misnaming(env, db):
     env.log.info("Renamed %d incorrectly named log level files from previous migrate (%d errors)", rename_count, rename_error_count)
     env.log.info("Deleted %d stray log level (%d errors)", delete_count, delete_error_count)
 
+def remove_stray_log_levels_files(env, db):
+    """Remove *.log.levels files without a matching *.log file (old Bitten versions did not delete .log.levels files when builds were deleted)"""
+    logs_dir = env.config.get("bitten", "logs_dir", "log/bitten")
+    if not os.path.isabs(logs_dir):
+        logs_dir = os.path.join(env.path, logs_dir)
+    if not os.path.isdir(logs_dir):
+        return
+
+    delete_count = 0
+    delete_error_count = 0
+
+    for filename in os.listdir(logs_dir):
+        if not filename.endswith('.log.levels'):
+            continue
+
+        log_filename = os.path.splitext(filename)[0]
+        full_log_filename = os.path.join(logs_dir, log_filename)
+        full_filename = os.path.join(logs_dir, filename)
+
+        if not os.path.exists(full_log_filename):
+            try:
+                os.remove(full_filename)
+                delete_count += 1
+                env.log.info("Deleted stray log levels file %s", filename)
+            except Exception, e:
+                delete_error_count += 1
+                env.log.warning("Error removing stray log levels file %s: %s", filename, e)
+
+    env.log.info("Deleted %d stray log levels (%d errors)", delete_count, delete_error_count)
+
 def recreate_rule_with_int_id(env, db):
         """Recreates the bitten_rule table with an integer id column rather than a text one."""
         from bitten.model import TargetPlatform
@@ -531,5 +561,5 @@ map = {
     8: [add_filename_to_logs,migrate_logs_to_files],
     9: [recreate_rule_with_int_id],
    10: [add_config_platform_rev_index_to_build, fix_sequences],
-   11: [fix_log_levels_misnaming],
+   11: [fix_log_levels_misnaming, remove_stray_log_levels_files],
 }

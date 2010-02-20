@@ -286,7 +286,6 @@ class UpgradeScriptsTestCase(BaseUpgradeTestCase):
         self.assertEqual(rows, [(str(model.schema_version),)])
 
     def test_fix_log_levels_misnaming(self):
-
         logfiles = {
             "1.log": "",
             "2.log": "",
@@ -318,24 +317,60 @@ class UpgradeScriptsTestCase(BaseUpgradeTestCase):
             path = os.path.join(self.logs_dir, filename)
             origfile = filename in logfiles and filename or filename.replace("levels", "level")
             self.assertEqual(logfiles[origfile], open(path).read())
+            self.assertTrue(filename not in expected_deletions)
 
         self.assertEqual(len(filenames), len(logfiles) - len(expected_deletions))
 
-        warns = [rec for rec in logwatch.records if rec.levelname == 'WARNING']
-        self.assertEqual(len(warns), 1)
-        for warn in warns:
-            self.assertTrue(warn.getMessage().startswith("Error renaming"))
-
-        infos = [rec for rec in logwatch.records if rec.levelname == 'INFO']
-        self.assertEqual(len(infos), 4)
-        for info in infos[:1]:
-            self.assertTrue(info.getMessage().startswith("Renamed incorrectly named log level file"))
-        self.assertTrue(infos[1].getMessage().startswith(
-            "Deleted stray log level file 4.log.level"))
-        self.assertTrue(infos[2].getMessage().startswith(
-            "Renamed 1 incorrectly named log level files from previous migrate (1 errors)"))
-        self.assertTrue(infos[3].getMessage().startswith(
+        logs = sorted(logwatch.records, key=lambda rec: rec.getMessage())
+        self.assertEqual(len(logs), 5)
+        self.assertTrue(logs[0].getMessage().startswith(
             "Deleted 1 stray log level (0 errors)"))
+        self.assertTrue(logs[1].getMessage().startswith(
+            "Deleted stray log level file 4.log.level"))
+        self.assertTrue(logs[2].getMessage().startswith(
+            "Error renaming"))
+        self.assertTrue(logs[3].getMessage().startswith(
+            "Renamed 1 incorrectly named log level files from previous migrate (1 errors)"))
+        self.assertTrue(logs[4].getMessage().startswith(
+            "Renamed incorrectly named log level file"))
+
+    def test_remove_stray_log_levels_files(self):
+        logfiles = {
+            "1.log": "",
+            "1.log.levels": "info\n",
+            "2.log.levels": "info\ninfo\n",
+        }
+        expected_deletions = [
+            "2.log.levels",
+        ]
+
+        for filename, data in logfiles.items():
+            path = os.path.join(self.logs_dir, filename)
+            logfile = open(path, "w")
+            logfile.write(data)
+            logfile.close()
+
+        logwatch = LogWatcher(logging.INFO)
+        self.env.log.setLevel(logging.INFO)
+        self.env.log.addHandler(logwatch)
+
+        upgrades.remove_stray_log_levels_files(self.env, None)
+
+        filenames = sorted(os.listdir(self.logs_dir))
+        for filename in filenames:
+            path = os.path.join(self.logs_dir, filename)
+            self.assertEqual(logfiles[filename], open(path).read())
+            self.assertTrue(filename not in expected_deletions)
+
+        self.assertEqual(len(filenames), len(logfiles) - len(expected_deletions))
+
+        logs = sorted(logwatch.records, key=lambda rec: rec.getMessage())
+        self.assertEqual(len(logs), 2)
+        self.assertTrue(logs[0].getMessage().startswith(
+            "Deleted 1 stray log levels (0 errors)"))
+        self.assertTrue(logs[1].getMessage().startswith(
+            "Deleted stray log levels file 2.log.levels"))
+
 
 def suite():
     suite = unittest.TestSuite()
