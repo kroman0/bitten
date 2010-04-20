@@ -76,9 +76,16 @@ You probably also want to grant permissions to someone (such as yourself)
 to manage build configurations, and allow anonymous users to view the
 status and results of builds::
 
-  $ trac-admin /path/to/projenv permission add anonymous BUILD_EXEC
-  $ trac-admin /path/to/projenv permission add anonymous BUILD_VIEW
   $ trac-admin /path/to/projenv permission add [yourname] BUILD_ADMIN
+  $ trac-admin /path/to/projenv permission add anonymous BUILD_VIEW
+
+Build slaves (see next section) will need permission to download build
+configurations and submit results. You can grant the permission using::
+
+  $ trac-admin /path/to/projenv permission add [slavegroup] BUILD_EXEC
+
+Alternatively you may allow anyone to submit builds by giving anonymous
+users this permission.
 
 You should now see an additional tab labeled "Build Status" in the Trac
 navigation bar. This link will take you to the list of build configurations,
