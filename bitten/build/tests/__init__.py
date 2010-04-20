@@ -12,7 +12,7 @@ import unittest
 
 from bitten.build.tests import api, config, ctools, hgtools, \
                                monotools, phptools, pythontools, \
-                               xmltools
+                               xmltools, javatools
 
 def suite():
     suite = unittest.TestSuite()
@@ -23,6 +23,7 @@ def suite():
     suite.addTest(monotools.suite())
     suite.addTest(phptools.suite())
     suite.addTest(pythontools.suite())
+    suite.addTest(javatools.suite())
     suite.addTest(xmltools.suite())
     return suite
 

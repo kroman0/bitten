@@ -101,6 +101,24 @@ def ant(ctxt, file_=None, target=None, keep_going=False, args=None):
     if not error_logged and cmdline.returncode != 0:
         ctxt.error('Ant failed (%s)' % cmdline.returncode)
 
+
+def _fix_traceback(result):
+    """
+    Sometimes the traceback isn't prefixed with the exception type and
+    message, so add it in if needed.
+    """
+    attr = result[0].attr
+    tracebackprefix = ""
+    # py.test does not include the type tag in some cases so don't do this
+    # fix when it is missing
+    if "type" in attr:
+        tracebackprefix = "%s: %s" % (attr['type'], attr.get('message', ''))
+    if result[0].gettext().startswith(tracebackprefix):
+        return result[0].gettext()
+    else:
+        return "\n".join((tracebackprefix, result[0].gettext()))
+
+
 def junit(ctxt, file_=None, srcdir=None):
     """Extract test results from a JUnit XML report.
     
@@ -132,16 +150,7 @@ def junit(ctxt, file_=None, srcdir=None):
                     result = list(testcase.children())
                     if result:
                         test.attr['status'] = result[0].name
-                        # Sometimes the traceback isn't prefixed with the
-                        # exception type and message, so add it in if needed
-                        tracebackprefix = "%s: %s" % (result[0].attr['type'],
-                                    result[0].attr.get('message', ''))
-                        if result[0].gettext().startswith(tracebackprefix):
-                            test.append(xmlio.Element('traceback')[
-                                        result[0].gettext()])
-                        else:
-                            test.append(xmlio.Element('traceback')[
-                                        "\n".join((tracebackprefix, result[0].gettext()))])
+                        test.append(xmlio.Element('traceback')[_fix_traceback(result)])
                         failed += 1
                     else:
                         test.attr['status'] = 'success'
