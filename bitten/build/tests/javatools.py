@@ -9,6 +9,7 @@
 # you should have received as part of this distribution. The terms
 # are also available at http://bitten.edgewall.org/wiki/License.
 
+import os
 import os.path
 import shutil
 import tempfile
@@ -119,10 +120,72 @@ class CoberturaTestCase(unittest.TestCase):
         self.assertEqual(0, elem.attr['lines'])
         self.assertEqual(0, elem.attr['percentage'])
 
+class PyTestTestCase(unittest.TestCase):
+    xml_template = """<testsuite name="%(name)s" errors="%(errors)d"
+        failures="%(failures)d" skips="%(skips)d" tests="%(tests)d" time="%(time)f">
+    %(body)s
+</testsuite>
+"""
+    def setUp(self):
+        self.basedir = os.path.realpath(tempfile.mkdtemp())
+        self.ctxt = Context(self.basedir)
+
+    def tearDown(self):
+        shutil.rmtree(self.basedir)
+
+    def _xml_file(self, body, name="", errors=0, failures=0, skips=0, tests=0, time=0.01):
+        if tests == 0:
+            tests = errors + failures + skips
+        (fd, path) = tempfile.mkstemp(prefix="junit", suffix=".xml", dir=self.basedir, text=True)
+        stream = os.fdopen(fd, "w")
+        content = self.xml_template % dict(body=body, name=name, errors=errors,
+                failures=failures, skips=skips, tests=tests, time=time)
+        stream.write(content)
+        stream.close()
+        return path
+
+    def test_simple(self):
+        body = '<testcase classname="_test.test_event" name="test_simple" time="0.0002"></testcase>'
+        filename = self._xml_file(body, tests=1)
+        javatools.junit(self.ctxt, file_=filename)
+        type, category, generator, xml = self.ctxt.output.pop()
+        self.assertEqual('report', type)
+        self.assertEqual('test', category)
+        self.assertEqual(1, len(xml.children))
+
+        elem = xml.children[0]
+        self.assertEqual('test', elem.name)
+        self.assertEqual('test_simple', elem.attr['name'])
+        self.assertEqual('success', elem.attr['status'])
+        self.assertEqual(0, len(elem.children))
+
+    def test_setup_fail(self):
+        """Check that py.test setup failures are handled"""
+        body = '<testcase classname="_test.test_event" name="test_simple" time="0">' \
+             + '<error message="test setup failure">request = &lt;FuncargRequest for &lt;Function...</error>' \
+             + '</testcase>'
+        filename = self._xml_file(body, errors=1)
+        javatools.junit(self.ctxt, file_=filename)
+        type, category, generator, xml = self.ctxt.output.pop()
+        self.assertEqual('report', type)
+        self.assertEqual('test', category)
+        self.assertEqual(1, len(xml.children))
+
+        elem = xml.children[0]
+        self.assertEqual('test', elem.name)
+        self.assertEqual('test_simple', elem.attr['name'])
+        self.assertEqual('error', elem.attr['status'])
+        self.assertEqual(1, len(elem.children))
+
+        trace = elem.children[0]
+        self.assertEqual('traceback', trace.name)
+        self.assertEqual(1, len(trace.children))
+        self.assertEqual('request = <FuncargRequest for <Function...', trace.children[0])
 
 def suite():
     suite = unittest.TestSuite()
     suite.addTest(unittest.makeSuite(CoberturaTestCase, 'test'))
+    suite.addTest(unittest.makeSuite(PyTestTestCase, 'test'))
     return suite
 
 if __name__ == '__main__':
