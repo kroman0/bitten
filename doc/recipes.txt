@@ -71,14 +71,15 @@ available by default.
 
 .. _`build recipe commands`: commands.html
 
-Recipes supports variables that can be interpolated into recipes, and using
-`Slave Configuration`_ further custom properties can be used. Bitten supports
-these pre-defined properties:
+Recipes may contain variables, for example ``${path}``, which are expanded
+before the recipe is executed. A small set of variables is pre-defined
+but custom variables may be added (see `Slave Configuration`_ for further
+instructions). The pre-defined recipe variables are:
 
 .. _`slave configuration`: configure.html
 
 +-----------------+----------------------------------------------------------+
-| Constant        | Value                                                    |
+| Variable name   | Expanded value                                           |
 +=================+==========================================================+
 | ``${path}``     | Repository path from the build configuration             |
 +-----------------+----------------------------------------------------------+
