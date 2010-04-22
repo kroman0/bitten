@@ -126,7 +126,8 @@ def exec_(ctxt, file_=None, module=None, function=None, output=None, args=None):
     returncode = shtools.execute(ctxt, executable=_python_path(ctxt),
                                  file_=file_, output=output, args=args)
     if returncode != 0:
-        ctxt.error('Executing %s failed (error code %s)' % (file_, returncode))
+        ctxt.error('Executing %s failed (error code %s)' % \
+                       (file_ or function or module, returncode))
 
 def pylint(ctxt, file_=None):
     """Extract data from a ``pylint`` run written to a file.
