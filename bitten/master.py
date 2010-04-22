@@ -258,12 +258,6 @@ class BuildMaster(Component):
             self._send_error(req, HTTP_BAD_REQUEST, 'XML parser error')
         stepname = elem.attr['step']
 
-        # make sure it's the right slave.
-        if build.status != Build.IN_PROGRESS:
-            self._send_error(req, HTTP_CONFLICT,
-                        'Build %s has been invalidated for host %s.' \
-                                        % (build.id, req.remote_addr))
-
         step = BuildStep.fetch(self.env, build=build.id, name=stepname)
         if step:
             self._send_error(req, HTTP_CONFLICT, 'Build step already exists')
