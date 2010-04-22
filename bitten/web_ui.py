@@ -248,7 +248,7 @@ class BuildConfigController(Component):
                         'platform': platform.name, 'status': 'pending'
                     })
 
-        data['configs'] = configs
+        data['configs'] = sorted(configs, key=lambda x:x['label'].lower())
         data['page_mode'] = 'overview'
 
         in_progress_builds = Build.select(self.env, status=Build.IN_PROGRESS)
