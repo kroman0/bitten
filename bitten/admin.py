@@ -212,7 +212,7 @@ class BuildConfigurationsAdminPageProvider(Component):
                     'href': req.href.admin('bitten', 'configs', config.name),
                     'recipe': config.recipe and True or False
                 })
-            data['configs'] = configs
+            data['configs'] = sorted(configs, key=lambda x:x['label'].lower())
 
         add_stylesheet(req, 'bitten/admin.css')
         add_script(req, 'common/js/suggest.js')

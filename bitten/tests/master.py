@@ -699,6 +699,7 @@ class BuildMasterTestCase(unittest.TestCase):
         build = Build.fetch(self.env, build.id)
         build.slave = None
         build.status = Build.PENDING
+        build.slave_info = {}
         build.update()
 
         # have this slave submit more data.
@@ -727,8 +728,8 @@ class BuildMasterTestCase(unittest.TestCase):
         self.assertRaises(RequestDone, module.process_request, req)
 
         self.assertEquals(409, outheaders['Status'])
-        self.assertEquals('Build 1 has been invalidated for host 127.0.0.1.',
-                        outbody.getvalue())            
+        self.assertEquals('Token mismatch (wrong slave): slave=123, build=',
+                          outbody.getvalue())
 
         build = Build.fetch(self.env, build.id)
         self.assertEqual(Build.PENDING, build.status)

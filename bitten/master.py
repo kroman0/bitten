@@ -210,6 +210,9 @@ class BuildMaster(Component):
         for step in list(BuildStep.select(self.env, build=build.id, db=db)):
             step.delete(db=db)
         build.update(db=db)
+
+        Attachment.delete_all(self.env, 'build', build.resource.id, db)
+
         db.commit()
 
         for listener in BuildSystem(self.env).listeners:
@@ -254,12 +257,6 @@ class BuildMaster(Component):
                            exc_info=True)
             self._send_error(req, HTTP_BAD_REQUEST, 'XML parser error')
         stepname = elem.attr['step']
-
-        # make sure it's the right slave.
-        if build.status != Build.IN_PROGRESS:
-            self._send_error(req, HTTP_CONFLICT,
-                        'Build %s has been invalidated for host %s.' \
-                                        % (build.id, req.remote_addr))
 
         step = BuildStep.fetch(self.env, build=build.id, name=stepname)
         if step:
@@ -330,6 +327,7 @@ class BuildMaster(Component):
             filename = attach_elem.attr.get('filename')
             resource_id = attach_elem.attr.get('resource') == 'config' \
                                     and build.config or build.resource.id
+
             try: # Delete attachment if it already exists
                 old_attach = Attachment(self.env, 'build',
                                     parent_id=resource_id, filename=filename)

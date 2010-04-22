@@ -16,7 +16,7 @@ from StringIO import StringIO
 
 import pkg_resources
 from genshi.builder import tag
-from trac.attachment import AttachmentModule
+from trac.attachment import AttachmentModule, Attachment
 from trac.core import *
 from trac.mimeview.api import Context
 from trac.resource import Resource
@@ -248,7 +248,7 @@ class BuildConfigController(Component):
                         'platform': platform.name, 'status': 'pending'
                     })
 
-        data['configs'] = configs
+        data['configs'] = sorted(configs, key=lambda x:x['label'].lower())
         data['page_mode'] = 'overview'
 
         in_progress_builds = Build.select(self.env, status=Build.IN_PROGRESS)
@@ -649,6 +649,8 @@ class BuildController(Component):
         build.status = Build.PENDING
         build.slave_info = {}
         build.update()
+
+        Attachment.delete_all(self.env, 'build', build.resource.id, db)
 
         db.commit()
 
