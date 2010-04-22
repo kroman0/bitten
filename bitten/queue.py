@@ -24,6 +24,8 @@ import re
 import time
 
 from trac.util.datefmt import to_timestamp
+from trac.attachment import Attachment
+
 
 from bitten.model import BuildConfig, TargetPlatform, Build, BuildStep
 
@@ -287,6 +289,8 @@ class BuildQueue(object):
             for step in list(BuildStep.select(self.env, build=build.id, db=db)):
                 step.delete(db=db)
             build.update(db=db)
+
+            Attachment.delete_all(self.env, 'build', build.resource.id, db)
         db.commit()
 
     def should_delete_build(self, build, repos):
