@@ -175,6 +175,30 @@ class RecipeTestCase(unittest.TestCase):
         recipe = Recipe(xml, basedir=self.basedir)
         recipe.validate()
 
+    def test_onerror_defaults(self):
+        xml = xmlio.parse('<build onerror="continue">'
+                          ' <step id="foo" description="Bar"></step>'
+                          '</build>')
+        recipe = Recipe(xml, basedir=self.basedir)
+        steps = list(recipe)
+        self.assertEqual(1, len(steps))
+        self.assertEqual('foo', steps[0].id)
+        self.assertEqual('Bar', steps[0].description)
+        self.assertEqual('continue', steps[0].onerror)
+
+
+    def test_onerror_override(self):
+        xml = xmlio.parse('<build onerror="ignore">'
+                          ' <step id="foo" description="Bar" onerror="continue"></step>'
+                          '</build>')
+        recipe = Recipe(xml, basedir=self.basedir)
+        steps = list(recipe)
+        self.assertEqual(1, len(steps))
+        self.assertEqual('foo', steps[0].id)
+        self.assertEqual('Bar', steps[0].description)
+        self.assertEqual('continue', steps[0].onerror)
+
+
 def suite():
     suite = unittest.TestSuite()
     suite.addTest(unittest.makeSuite(ContextTestCase, 'test'))
