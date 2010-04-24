@@ -373,6 +373,7 @@ class Build(object):
             Column('rev_time', type='int'), Column('platform', type='int'),
             Column('slave'), Column('started', type='int'),
             Column('stopped', type='int'), Column('status', size=1),
+            Column('last_activity', type='int'),
             Index(['config', 'rev', 'platform'], unique=True)
         ],
         Table('bitten_slave', key=('build', 'propname'))[
@@ -397,7 +398,8 @@ class Build(object):
     TOKEN = 'token'
 
     def __init__(self, env, config=None, rev=None, platform=None, slave=None,
-                 started=0, stopped=0, rev_time=0, status=PENDING):
+                 started=0, stopped=0, last_activity=0, 
+                 rev_time=0, status=PENDING):
         """Initialize a new build with the specified attributes.
 
         To actually create this build in the database, the `insert` method needs
@@ -411,6 +413,7 @@ class Build(object):
         self.slave = slave
         self.started = started or 0
         self.stopped = stopped or 0
+        self.last_activity = last_activity or 0
         self.rev_time = rev_time
         self.status = status
         self.slave_info = {}
@@ -466,11 +469,12 @@ class Build(object):
 
         cursor = db.cursor()
         cursor.execute("INSERT INTO bitten_build (config,rev,rev_time,platform,"
-                       "slave,started,stopped,status) "
-                       "VALUES (%s,%s,%s,%s,%s,%s,%s,%s)",
+                       "slave,started,stopped,last_activity,status) "
+                       "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)",
                        (self.config, self.rev, int(self.rev_time),
                         self.platform, self.slave or '', self.started or 0,
-                        self.stopped or 0, self.status))
+                        self.stopped or 0, self.last_activity or 0,
+                        self.status))
         self.id = db.get_last_id(cursor, 'bitten_build')
         if self.slave_info:
             cursor.executemany("INSERT INTO bitten_slave VALUES (%s,%s,%s)",
@@ -497,9 +501,10 @@ class Build(object):
 
         cursor = db.cursor()
         cursor.execute("UPDATE bitten_build SET slave=%s,started=%s,"
-                       "stopped=%s,status=%s WHERE id=%s",
+                       "stopped=%s,last_activity=%s,status=%s WHERE id=%s",
                        (self.slave or '', self.started or 0,
-                        self.stopped or 0, self.status, self.id))
+                        self.stopped or 0, self.last_activity or 0,
+                        self.status, self.id))
         cursor.execute("DELETE FROM bitten_slave WHERE build=%s", (self.id,))
         if self.slave_info:
             cursor.executemany("INSERT INTO bitten_slave VALUES (%s,%s,%s)",
@@ -515,7 +520,8 @@ class Build(object):
 
         cursor = db.cursor()
         cursor.execute("SELECT config,rev,rev_time,platform,slave,started,"
-                       "stopped,status FROM bitten_build WHERE id=%s", (id,))
+                       "stopped,last_activity,status FROM bitten_build WHERE "
+                       "id=%s", (id,))
         row = cursor.fetchone()
         if not row:
             return None
@@ -523,7 +529,9 @@ class Build(object):
         build = Build(env, config=row[0], rev=row[1], rev_time=int(row[2]),
                       platform=int(row[3]), slave=row[4],
                       started=row[5] and int(row[5]) or 0,
-                      stopped=row[6] and int(row[6]) or 0, status=row[7])
+                      stopped=row[6] and int(row[6]) or 0, 
+                      last_activity=row[7] and int(row[7]) or 0,
+                      status=row[8])
         build.id = int(id)
         cursor.execute("SELECT propname,propvalue FROM bitten_slave "
                        "WHERE build=%s", (id,))
@@ -587,6 +595,7 @@ class BuildStep(object):
 
     # Step status codes
     SUCCESS = 'S'
+    IN_PROGRESS = 'I'
     FAILURE = 'F'
 
     def __init__(self, env, build=None, name=None, description=None,
@@ -610,7 +619,8 @@ class BuildStep(object):
                       doc='Whether this build step exists in the database')
     successful = property(fget=lambda self: self.status == BuildStep.SUCCESS,
                           doc='Whether the build step was successful')
-
+    completed = property(fget=lambda self: self.status == BuildStep.SUCCESS or self.status == BuildStep.FAILURE,
+                          doc='Whether this build step has completed processing')
     def delete(self, db=None):
         """Remove the build step from the database."""
         if not db:
@@ -645,7 +655,7 @@ class BuildStep(object):
             handle_ta = False
 
         assert self.build and self.name
-        assert self.status in (self.SUCCESS, self.FAILURE)
+        assert self.status in (self.SUCCESS, self.IN_PROGRESS, self.FAILURE)
 
         cursor = db.cursor()
         cursor.execute("INSERT INTO bitten_step (build,name,description,status,"
@@ -694,7 +704,7 @@ class BuildStep(object):
         if not db:
             db = env.get_db_cnx()
 
-        assert status in (None, BuildStep.SUCCESS, BuildStep.FAILURE)
+        assert status in (None, BuildStep.SUCCESS, BuildStep.IN_PROGRESS, BuildStep.FAILURE)
 
         where_clauses = []
         if build is not None:
@@ -709,7 +719,7 @@ class BuildStep(object):
             where = ""
 
         cursor = db.cursor()
-        cursor.execute("SELECT build,name FROM bitten_step %s ORDER BY stopped"
+        cursor.execute("SELECT build,name FROM bitten_step %s ORDER BY started"
                        % where, [wc[1] for wc in where_clauses])
         for build, name in cursor:
             yield BuildStep.fetch(env, build, name, db=db)
@@ -1031,4 +1041,4 @@ class Report(object):
 
 schema = BuildConfig._schema + TargetPlatform._schema + Build._schema + \
          BuildStep._schema + BuildLog._schema + Report._schema
-schema_version = 11
+schema_version = 12

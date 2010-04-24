@@ -24,6 +24,7 @@ import re
 import time
 
 from trac.util.datefmt import to_timestamp
+from trac.util import pretty_timedelta, format_datetime
 from trac.attachment import Attachment
 
 
@@ -276,16 +277,21 @@ class BuildQueue(object):
         db = self.env.get_db_cnx()
         now = int(time.time())
         for build in Build.select(self.env, status=Build.IN_PROGRESS, db=db):
-            if now - build.started < self.timeout:
+            if now - build.last_activity < self.timeout:
                 # This build has not reached the timeout yet, assume it's still
                 # being executed
-                # FIXME: ideally, we'd base this check on the last activity on
-                #        the build, not the start time
                 continue
+
+            self.log.info('Orphaning build %d. Last activity was %s (%s)' % \
+                              (build.id, format_datetime(build.last_activity),
+                               pretty_timedelta(build.last_activity)))
+
             build.status = Build.PENDING
             build.slave = None
             build.slave_info = {}
             build.started = 0
+            build.stopped = 0
+            build.last_activity = 0
             for step in list(BuildStep.select(self.env, build=build.id, db=db)):
                 step.delete(db=db)
             build.update(db=db)

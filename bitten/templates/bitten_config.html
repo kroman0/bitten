@@ -18,6 +18,17 @@
       </py:choose>
     </strong>
     
+    <div py:def="build_time(build)" class="system">
+      <py:choose>
+	<span py:when="build.stopped">
+	  <div>Duration: ${build.duration}</div>
+	</span>
+	<span py:otherwise="">
+	  <div>${build.started} (${build.started_delta} ago)</div>
+	</span>
+      </py:choose>
+    </div>
+
     <div py:def="slave_info(slave)" class="system">
       <strong>$slave.name</strong> ($slave.ipnr)<br />
       $slave.os_name $slave.os_version
@@ -27,12 +38,12 @@
     
     <ul py:def="build_steps(steps)" py:if="steps" class="steps">
       <li py:for="step in steps"
-          class="${step.failed and 'failed' or 'success'}">
+          class="${step.cls}">
         <span class="duration">$step.duration</span> 
         <a href="$step.href" title="${step.description or None}">
           $step.name
         </a>
-        <ul py:if="step.failed and step.errors">
+        <ul py:if="step.status is 'failed' and step.errors">
           <li py:for="error in step.errors">$error</li>
         </ul>
       </li>
@@ -65,8 +76,7 @@
         </py:if></py:for>)</i>
        </div></py:if><py:if test="config.builds_inprogress">
        <div>$config.builds_inprogress in-progress
-         build<py:if test="config.builds_inprogress > 1">s</py:if>&nbsp;<i>(<py:for each="platform in config.platforms">
-           <py:if test="platform.builds_inprogress">
+         build<py:if test="config.builds_inprogress > 1">s</py:if>&nbsp;<i>(<py:for each="platform in config.platforms"><py:if test="platform.builds_inprogress">
             $platform.name: $platform.builds_inprogress
           </py:if></py:for>)</i>
       </div></py:if>
@@ -137,9 +147,8 @@
           $platform.name: $platform.builds_pending
         </py:if></py:for>)</i>
        </div></py:if><py:if test="config.builds_inprogress">
-        <div>$config.builds_inprogress in-progress build<py:if test="config.builds_inprogress > 1">s</py:if>&nbsp;<i>(<py:for each="platform in config.platforms">
-          <py:if test="platform.builds_inprogress">
-            $platform.name: $platform.builds_inprogress
+	<div>$config.builds_inprogress in-progress build<py:if test="config.builds_inprogress > 1">s</py:if>&nbsp;<i>(<py:for each="platform in config.platforms"><py:if test="platform.builds_inprogress">
+	$platform.name: $platform.builds_inprogress
         </py:if></py:for>)</i>
       </div></py:if>
       <div id="charts"><py:for each="chart in config.charts">
@@ -173,6 +182,7 @@
                   ${build_status(build.status)}
                 </a>
                 ${slave_info(build.slave)}
+		${build_time(build)}
               </div>
               ${build_steps(build.steps)}
             </td>
@@ -201,6 +211,7 @@
                 $build.id: <strong class="status">$build.platform</strong>
               </a>
               ${slave_info(build.slave)}
+              ${build_time(build)}
             </div>
             ${build_steps(build.steps)}
           </td>

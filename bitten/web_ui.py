@@ -12,6 +12,7 @@
 
 import posixpath
 import re
+import time
 from StringIO import StringIO
 from datetime import datetime
 
@@ -45,6 +46,9 @@ _status_title = {Build.PENDING: 'Pending',
                  Build.IN_PROGRESS: 'In Progress',
                  Build.SUCCESS: 'Success',
                  Build.FAILURE: 'Failure'}
+_step_status_label = {BuildStep.SUCCESS: 'success',
+                      BuildStep.FAILURE: 'failed',
+                      BuildStep.IN_PROGRESS: 'in progress'}
 
 def _get_build_data(env, req, build):
     data = {'id': build.id, 'name': build.slave, 'rev': build.rev,
@@ -89,7 +93,7 @@ class BittenChrome(Component):
             status = ''
             if BuildMaster(self.env).quick_status:
                 repos = self.env.get_repository(req.authname)
-                for config in BuildConfig.select(self.env, 
+                for config in BuildConfig.select(self.env,
                                                  include_inactive=False):
                     prev_rev = None
                     for platform, rev, build in collect_changes(repos, config):
@@ -106,11 +110,11 @@ class BittenChrome(Component):
                                 status='bitteninprogress'
                             elif not status:
                                 if (build_data['status'] == 'completed'):
-                                    status='bittencompleted'  
+                                    status='bittencompleted'
                 if not status:
                     status='bittenpending'
             yield ('mainnav', 'build',
-                   tag.a('Build Status', href=req.href.build(), accesskey=5, 
+                   tag.a('Build Status', href=req.href.build(), accesskey=5,
                          class_=status))
 
     # ITemplatesProvider methods
@@ -164,16 +168,16 @@ class BuildConfigController(Component):
         return 'bitten_config.html', data, None
 
     # IRequestHandler methods
-    
+
     def pre_process_request(self, req, handler):
         return handler
 
     def post_process_request(self, req, template, data, content_type):
         if template:
             add_stylesheet(req, 'bitten/bitten.css')
-        
+
         return template, data, content_type
-        
+
     # Internal methods
 
     def _render_overview(self, req):
@@ -301,9 +305,10 @@ class BuildConfigController(Component):
                     build_data['steps'].append({
                         'name': step.name,
                         'description': step.description,
-                        'duration': to_datetime(step.stopped, utc) - \
+                        'duration': to_datetime(step.stopped or int(time.time()), utc) - \
                                     to_datetime(step.started, utc),
-                        'failed': not step.successful,
+                        'status': _step_status_label[step.status],
+                        'cls': _step_status_label[step.status].replace(' ', '-'),
                         'errors': step.errors,
                         'href': build_data['href'] + '#step_' + step.name
                     })
@@ -311,7 +316,7 @@ class BuildConfigController(Component):
                 builds.append(build_data)
                 current_builds += 1
 
-            if current_builds == 0: 
+            if current_builds == 0:
                 continue
 
             description = config.description
@@ -325,7 +330,7 @@ class BuildConfigController(Component):
                 'builds': builds
             })
 
-        data['configs'] = configs
+        data['configs'] = sorted(configs, key=lambda x:x['label'].lower())
         return data
 
     def _render_config(self, req, config_name):
@@ -372,7 +377,7 @@ class BuildConfigController(Component):
                                                db=db))
         data['config']['platforms'] = [
             { 'name': platform.name,
-              'id': platform.id, 
+              'id': platform.id,
               'builds_pending': len(list(Build.select(self.env,
                                                     config=config.name,
                                                     status=Build.PENDING,
@@ -393,13 +398,13 @@ class BuildConfigController(Component):
         if has_reports:
             chart_generators = []
             report_categories = list(self._report_categories_for_config(config))
-            for generator in ReportChartController(self.env).generators: 
-                for category in generator.get_supported_categories(): 
+            for generator in ReportChartController(self.env).generators:
+                for category in generator.get_supported_categories():
                     if category in report_categories:
                         chart_generators.append({
-                            'href': req.href.build(config.name, 'chart/' + category) 
+                            'href': req.href.build(config.name, 'chart/' + category)
                         })
-            data['config']['charts'] = chart_generators 
+            data['config']['charts'] = chart_generators
             charts_license = self.config.get('bitten', 'charts_license')
             if charts_license:
                 data['config']['charts_license'] = charts_license
@@ -428,9 +433,11 @@ class BuildConfigController(Component):
                         build_data['steps'].append({
                             'name': step.name,
                             'description': step.description,
-                            'duration': to_datetime(step.stopped, utc) - \
+                            'duration': to_datetime(step.stopped or int(time.time()), utc) - \
                                         to_datetime(step.started, utc),
-                            'failed': not step.successful,
+                            'status': _step_status_label[step.status],
+                            'cls': _step_status_label[step.status].replace(' ', '-'),
+
                             'errors': step.errors,
                             'href': build_data['href'] + '#step_' + step.name
                         })
@@ -457,16 +464,16 @@ class BuildConfigController(Component):
         """Yields the categories of reports that exist for active builds
         of this configuration.
         """
-           
+
         db = self.env.get_db_cnx()
         repos = self.env.get_repository()
         cursor = db.cursor()
-        
+
         cursor.execute("""SELECT DISTINCT report.category as category
-FROM bitten_build AS build 
+FROM bitten_build AS build
 JOIN bitten_report AS report ON (report.build=build.id)
-WHERE build.config=%s AND build.rev_time >= %s AND build.rev_time <= %s""", 
-                       (config.name, 
+WHERE build.config=%s AND build.rev_time >= %s AND build.rev_time <= %s""",
+                       (config.name,
                         config.min_rev_time(self.env),
                         config.max_rev_time(self.env)))
 
@@ -545,8 +552,9 @@ class BuildController(Component):
         for step in BuildStep.select(self.env, build=build.id, db=db):
             steps.append({
                 'name': step.name, 'description': step.description,
-                'duration': pretty_timedelta(step.started, step.stopped),
-                'failed': step.status == BuildStep.FAILURE,
+                'duration': pretty_timedelta(step.started, step.stopped or int(time.time())),
+                'status': _step_status_label[step.status],
+                'cls': _step_status_label[step.status].replace(' ', '-'),
                 'errors': step.errors,
                 'log': self._render_log(req, build, formatters, step),
                 'reports': self._render_reports(req, config, build, summarizers,
@@ -668,7 +676,9 @@ class BuildController(Component):
             step.delete(db=db)
 
         build.slave = None
-        build.started = build.stopped = 0
+        build.started = 0
+        build.stopped = 0
+        build.last_activity = 0
         build.status = Build.PENDING
         build.slave_info = {}
         build.update()

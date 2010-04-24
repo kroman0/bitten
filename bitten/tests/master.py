@@ -261,7 +261,7 @@ class BuildMasterTestCase(unittest.TestCase):
 
     def test_initiate_build(self):
         config = BuildConfig(self.env, 'test', path='somepath', active=True,
-                             recipe='<build></build>')
+                             recipe='<build><step id="s1"></step></build>')
         config.insert()
         platform = TargetPlatform(self.env, config='test', name="Unix")
         platform.rules.append(('family', 'posix'))
@@ -288,14 +288,14 @@ class BuildMasterTestCase(unittest.TestCase):
         self.assertRaises(RequestDone, module.process_request, req)
 
         self.assertEqual(200, outheaders['Status'])
-        self.assertEqual('90', outheaders['Content-Length'])
+        self.assertEqual('112', outheaders['Content-Length'])
         self.assertEqual('application/x-bitten+xml',
                          outheaders['Content-Type'])
         self.assertEqual('attachment; filename=recipe_test_r123.xml',
                          outheaders['Content-Disposition'])
         self.assertEqual('<build build="1" config="test" name="hal"'
                          ' path="somepath" platform="Unix"'
-                         ' revision="123"/>',
+                         ' revision="123"><step id="s1"/></build>',
                          outbody.getvalue())
 
         # Make sure the started timestamp has been set
@@ -376,6 +376,9 @@ class BuildMasterTestCase(unittest.TestCase):
                    write=outbody.write,
                    incookie=Cookie('trac_auth=123'))
         module = BuildMaster(self.env)
+
+        module._start_new_step(build, 'foo').insert()
+
         assert module.match_request(req)
 
         self.assertRaises(RequestDone, module.process_request, req)
@@ -428,6 +431,9 @@ class BuildMasterTestCase(unittest.TestCase):
                    write=outbody.write,
                    incookie=Cookie('trac_auth=123'))
         module = BuildMaster(self.env)
+
+        module._start_new_step(build, 'foo').insert()
+
         assert module.match_request(req)
 
         self.assertRaises(RequestDone, module.process_request, req)
@@ -490,6 +496,9 @@ class BuildMasterTestCase(unittest.TestCase):
                    write=outbody.write,
                    incookie=Cookie('trac_auth=123'))
         module = BuildMaster(self.env)
+
+        module._start_new_step(build, 'foo').insert()
+
         assert module.match_request(req)
 
         self.assertRaises(RequestDone, module.process_request, req)
@@ -563,6 +572,9 @@ class BuildMasterTestCase(unittest.TestCase):
                    write=outbody.write,
                    incookie=Cookie('trac_auth=123'))
         module = BuildMaster(self.env)
+
+        module._start_new_step(build, 'foo').insert()
+
         assert module.match_request(req)
 
         self.assertRaises(RequestDone, module.process_request, req)
@@ -633,6 +645,9 @@ class BuildMasterTestCase(unittest.TestCase):
                    write=outbody.write,
                    incookie=Cookie('trac_auth='))
         module = BuildMaster(self.env)
+
+        module._start_new_step(build, 'foo').insert()
+
         assert module.match_request(req)
 
         self.assertRaises(RequestDone, module.process_request, req)
@@ -646,7 +661,7 @@ class BuildMasterTestCase(unittest.TestCase):
         assert not build.stopped
 
         steps = list(BuildStep.select(self.env, build.id))
-        self.assertEqual(0, len(steps))
+        self.assertEqual(1, len(steps))
 
     def test_process_build_step_invalidated_build(self):
         recipe = """<build>
@@ -683,6 +698,9 @@ class BuildMasterTestCase(unittest.TestCase):
                    write=outbody.write,
                    incookie=Cookie('trac_auth=123'))
         module = BuildMaster(self.env)
+
+        module._start_new_step(build, 'foo').insert()
+
         assert module.match_request(req)
 
         self.assertRaises(RequestDone, module.process_request, req)
@@ -692,7 +710,7 @@ class BuildMasterTestCase(unittest.TestCase):
         assert not build.stopped
 
         steps = list(BuildStep.select(self.env, build.id))
-        self.assertEqual(1, len(steps))
+        self.assertEqual(2, len(steps))
 
         # invalidate the build. 
 
@@ -723,6 +741,9 @@ class BuildMasterTestCase(unittest.TestCase):
                    write=outbody.write,
                    incookie=Cookie('trac_auth=123'))
         module = BuildMaster(self.env)
+
+        module._start_new_step(build, 'foo').insert()
+
         assert module.match_request(req)
 
         self.assertRaises(RequestDone, module.process_request, req)
@@ -763,6 +784,9 @@ class BuildMasterTestCase(unittest.TestCase):
                    write=outbody.write,
                    incookie=Cookie('trac_auth=123'))
         module = BuildMaster(self.env)
+
+        module._start_new_step(build, 'foo').insert()
+
         assert module.match_request(req)
 
         self.assertRaises(RequestDone, module.process_request, req)
@@ -812,6 +836,9 @@ class BuildMasterTestCase(unittest.TestCase):
                    write=outbody.write,
                    incookie=Cookie('trac_auth=123'))
         module = BuildMaster(self.env)
+
+        module._start_new_step(build, 'foo').insert()
+
         assert module.match_request(req)
 
         self.assertRaises(RequestDone, module.process_request, req)
@@ -906,6 +933,9 @@ class BuildMasterTestCase(unittest.TestCase):
                    incookie=Cookie('trac_auth='))
 
         module = BuildMaster(self.env)
+
+        module._start_new_step(build, 'foo').insert()
+
         assert module.match_request(req)
 
         self.assertRaises(RequestDone, module.process_request, req)
@@ -933,6 +963,9 @@ class BuildMasterTestCase(unittest.TestCase):
                    incookie=Cookie('trac_auth='))
 
         module = BuildMaster(self.env)
+
+        module._start_new_step(build, 'foo').insert()
+
         assert module.match_request(req)
         
         self.assertRaises(RequestDone, module.process_request, req)
