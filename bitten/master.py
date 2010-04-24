@@ -242,6 +242,14 @@ class BuildMaster(Component):
         self.log.info('Build slave %r initiated build %d', build.slave,
                       build.id)
 
+        # create the first step, mark it as in-progress.
+
+        recipe = Recipe(xmlio.parse(config.recipe))
+        stepname = recipe.__iter__().next().id
+
+        step = self._start_new_step(build, stepname)
+        step.insert()
+
         self._send_response(req, 200, body, headers={
                     'Content-Type': 'application/x-bitten+xml',
                     'Content-Length': str(len(body)),
@@ -258,9 +266,11 @@ class BuildMaster(Component):
             self._send_error(req, HTTP_BAD_REQUEST, 'XML parser error')
         stepname = elem.attr['step']
 
+        # we should have created this step previously; if it hasn't,
+        # the master and slave are processing steps out of order.
         step = BuildStep.fetch(self.env, build=build.id, name=stepname)
-        if step:
-            self._send_error(req, HTTP_CONFLICT, 'Build step already exists')
+        if not step:
+            self._send_error(req, HTTP_CONFLICT, 'Build step has not been created.')
 
         recipe = Recipe(xmlio.parse(config.recipe))
         index = None
@@ -280,14 +290,7 @@ class BuildMaster(Component):
 
         db = self.env.get_db_cnx()
 
-        step = BuildStep(self.env, build=build.id, name=stepname)
-
-        # not a great way to determine the start/stop time of the
-        # step, but it's a server time, which eliminates a bunch
-        # of skew issues.
-        now = int(time.time())
-        step.started = now - float(elem.attr['duration'])
-        step.stopped = now
+        step.stopped = int(time.time())
 
         if elem.attr['status'] == 'failure':
             self.log.warning('Build %s step %s failed', build.id, stepname)
@@ -297,6 +300,9 @@ class BuildMaster(Component):
         else:
             step.status = BuildStep.SUCCESS
         step.errors += [error.gettext() for error in elem.children('error')]
+
+        # TODO: step.update(db=db)
+        step.delete(db=db)
         step.insert(db=db)
 
         # Collect log messages from the request body
@@ -362,6 +368,17 @@ class BuildMaster(Component):
                 build.status = Build.SUCCESS
 
             build.update(db=db)
+        else:
+            # start the next step.
+            for num, recipe_step in enumerate(recipe):
+                if num == index + 1:
+                    next_step = recipe_step
+            if next_step is None:
+                self._send_error(req, HTTP_FORBIDDEN,
+                                 'Unable to find step after ' % stepname)
+
+            step = self._start_new_step(build, next_step.id)
+            step.insert(db=db)
 
         db.commit()
 
@@ -376,3 +393,13 @@ class BuildMaster(Component):
                             'Location': req.abs_href.builds(
                                     build.id, 'steps', stepname)})
 
+    def _start_new_step(self, build, stepname):
+        """Creates the in-memory representation for a newly started
+        step, ready to be persisted to the database.
+        """
+        step = BuildStep(self.env, build=build.id, name=stepname)
+        step.status = BuildStep.IN_PROGRESS
+        step.started = int(time.time())
+        step.stopped = 0
+
+        return step
