@@ -67,7 +67,7 @@ def copytree(src, dst, symlinks=False):
     if errors:
         raise Error, errors
 
-def checkout(ctxt, url, path=None, revision=None, dir_='.', verbose=False, shared_path=None,
+def checkout(ctxt, url, path=None, revision=None, dir_='.', verbose='false', shared_path=None,
         username=None, password=None):
     """Perform a checkout from a Subversion repository.
     
@@ -96,7 +96,7 @@ def checkout(ctxt, url, path=None, revision=None, dir_='.', verbose=False, share
     args += [final_url, dir_]
 
     cofilter = None
-    if not verbose:
+    if verbose.lower() == 'false':
         cre = re.compile(r'^[AU]\s.*$')
         cofilter = lambda s: cre.sub('', s)
     if shared_path is not None:
