@@ -303,10 +303,14 @@ class BuildSlave(object):
                 os.mkdir(basedir)
 
             for step in recipe:
-                log.info('Executing build step %r', step.id)
-                if not self._execute_step(build_url, recipe, step):
-                    log.warning('Stopping build due to failure')
-                    break
+                try:
+                    log.info('Executing build step %r, onerror = %s', step.id, step.onerror)
+                    if not self._execute_step(build_url, recipe, step):
+                        log.warning('Stopping build due to failure')
+                        break
+                except Exception, e:
+                    log.error('Exception raised processing step %s. Reraising %s', step.id, e)
+                    raise
             else:
                 log.info('Build completed')
             if self.dry_run:
@@ -361,7 +365,6 @@ class BuildSlave(object):
             except KeyboardInterrupt:
                 log.warning('Build interrupted')
                 self._cancel_build(build_url)
-
         return not failed or step.onerror != 'fail'
 
     def _cancel_build(self, build_url, exit_code=EX_OK):

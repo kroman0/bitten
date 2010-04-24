@@ -353,7 +353,8 @@ class BuildMaster(Component):
             for num, recipe_step in enumerate(recipe):
                 step = BuildStep.fetch(self.env, build.id, recipe_step.id)
                 if step.status == BuildStep.FAILURE:
-                    if recipe_step.onerror != 'ignore':
+                    if recipe_step.onerror == 'fail' or \
+                            recipe_step.onerror == 'continue':
                         build.status = Build.FAILURE
                         break
             else:

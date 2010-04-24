@@ -831,6 +831,56 @@ class BuildMasterTestCase(unittest.TestCase):
         self.assertEqual('foo', steps[0].name)
         self.assertEqual(BuildStep.FAILURE, steps[0].status)
 
+
+    def test_process_build_step_failure_continue(self):
+        recipe = """<build>
+  <step id="foo" onerror="continue">
+  </step>
+</build>"""
+        BuildConfig(self.env, 'test', path='somepath', active=True,
+                    recipe=recipe).insert()
+        build = Build(self.env, 'test', '123', 1, slave='hal', rev_time=42,
+                      started=42, status=Build.IN_PROGRESS)
+        build.slave_info[Build.TOKEN] = '123';
+
+        build.insert()
+
+        inbody = StringIO("""<result step="foo" status="failure"
+                                     time="2007-04-01T15:30:00.0000"
+                                     duration="3.45">
+</result>""")
+        outheaders = {}
+        outbody = StringIO()
+        req = Mock(method='POST', base_path='',
+                   path_info='/builds/%d/steps/' % build.id,
+                   href=Href('/trac'), abs_href=Href('http://example.org/trac'),
+                   remote_addr='127.0.0.1', args={},
+                   perm=PermissionCache(self.env, 'hal'),
+                   read=inbody.read,
+                   send_response=lambda x: outheaders.setdefault('Status', x),
+                   send_header=lambda x, y: outheaders.setdefault(x, y),
+                   write=outbody.write,
+                   incookie=Cookie('trac_auth=123'))
+        module = BuildMaster(self.env)
+        assert module.match_request(req)
+
+        self.assertRaises(RequestDone, module.process_request, req)
+
+        self.assertEqual(201, outheaders['Status'])
+        self.assertEqual('20', outheaders['Content-Length'])
+        self.assertEqual('text/plain', outheaders['Content-Type'])
+        self.assertEqual('Build step processed', outbody.getvalue())
+
+        build = Build.fetch(self.env, build.id)
+        self.assertEqual(Build.FAILURE, build.status)
+        assert build.stopped
+        assert build.stopped > build.started
+
+        steps = list(BuildStep.select(self.env, build.id))
+        self.assertEqual(1, len(steps))
+        self.assertEqual('foo', steps[0].name)
+        self.assertEqual(BuildStep.FAILURE, steps[0].status)
+
     def test_process_build_step_invalid_xml(self):
         recipe = """<build>
   <step id="foo">

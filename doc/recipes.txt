@@ -36,9 +36,19 @@ A ``<step>`` element will consist of any number of commands and reports. Most of
 these elements are declared in XML namespaces, where the namespace URI defines
 a collection of related commands.
 
-A ``<step>`` element can additionally have an ``onerror`` attribute with
-value of ``fail`` (terminate after step, default behaviour) or ``ignore``
-(fail, but run next step).
+
+The ``<build>`` element can optionally have an ``onerror`` attribute that
+dictates how a build should proceed after the failure of a step. Allowable
+values are:
+  ``fail``: failure of a step causes the build to terminate. (default)
+  ``continue``: builds continue after step failures. Failing steps
+                contribute to the overall build status.
+  ``ignore``: builds continue after step failures. Builds are marked
+              as successful even in the presence of failed steps with
+	      onerror='ignore'
+
+``<step>`` elements can override the ``<build>`` ``onerror`` attribute with
+their own ``onerror`` attributes.
 
 Commonly, the first step of any build recipe will perform the checkout from the
 repository.

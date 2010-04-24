@@ -202,7 +202,7 @@ class Step(object):
     their keyword arguments.
     """
 
-    def __init__(self, elem):
+    def __init__(self, elem, onerror_default):
         """Create the step.
         
         :param elem: the XML element representing the step
@@ -211,7 +211,8 @@ class Step(object):
         self._elem = elem
         self.id = elem.attr['id']
         self.description = elem.attr.get('description')
-        self.onerror = elem.attr.get('onerror', 'fail')
+        self.onerror = elem.attr.get('onerror', onerror_default)
+        assert self.onerror in ('fail', 'ignore', 'continue')
 
     def __repr__(self):
         return '<%s %r>' % (type(self).__name__, self.id)
@@ -272,11 +273,13 @@ class Recipe(object):
                      if not name.startswith('xmlns')])
         self.ctxt = Context(basedir, config, vars)
         self._root = xml
+    	self.onerror_default = vars.get('onerror', 'fail')
+        assert self.onerror_default in ('fail', 'ignore', 'continue')
 
     def __iter__(self):
         """Iterate over the individual steps of the recipe."""
         for child in self._root.children('step'):
-            yield Step(child)
+            yield Step(child, self.onerror_default)
 
     def validate(self):
         """Validate the recipe.
