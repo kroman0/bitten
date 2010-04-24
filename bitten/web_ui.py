@@ -402,7 +402,8 @@ class BuildConfigController(Component):
                 for category in generator.get_supported_categories():
                     if category in report_categories:
                         chart_generators.append({
-                            'href': req.href.build(config.name, 'chart/' + category)
+                            'href': req.href.build(config.name, 'chart/' + category),
+                            'category': category,
                         })
             data['config']['charts'] = chart_generators
             charts_license = self.config.get('bitten', 'charts_license')
@@ -571,6 +572,7 @@ class BuildController(Component):
 
         add_script(req, 'common/js/folding.js')
         add_script(req, 'bitten/tabset.js')
+        add_script(req, 'bitten/jquery.flot.js')
         add_stylesheet(req, 'bitten/bitten.css')
         return 'bitten_build.html', data, None
 
@@ -719,6 +721,16 @@ class ReportChartController(Component):
 
     # IRequestHandler methods
 
+    def _get_dumps(self):
+        try:
+            import json
+            return json.dumps
+        except ImportError:
+            pass
+
+        import simplejson
+        return simplejson.dumps
+
     def match_request(self, req):
         match = re.match(r'/build/([\w.-]+)/chart/(\w+)', req.path_info)
         if match:
@@ -738,7 +750,9 @@ class ReportChartController(Component):
         else:
             raise TracError('Unknown report category "%s"' % category)
 
-        return tmpl, data, 'text/xml'
+        data['dumps'] = self._get_dumps()
+
+        return tmpl, data, 'text/plain'
 
 
 class SourceFileLinkFormatter(Component):

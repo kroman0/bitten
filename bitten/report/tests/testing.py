@@ -41,11 +41,13 @@ class TestResultsChartGeneratorTestCase(unittest.TestCase):
                       max_rev_time=lambda env: 1000)
         generator = TestResultsChartGenerator(self.env)
         template, data = generator.generate_chart_data(req, config, 'test')
-        self.assertEqual('bitten_chart_tests.html', template)
+        self.assertEqual('json.txt', template)
+        data = data['json']
         self.assertEqual('Unit Tests', data['title'])
-        self.assertEqual('', data['data'][0][0])
-        self.assertEqual('Total', data['data'][1][0])
-        self.assertEqual('Failures', data['data'][2][0])
+        actual_data = data['data']
+        self.assertEqual([], actual_data[0]['data'])
+        self.assertEqual('Total', actual_data[0]['label'])
+        self.assertEqual('Failures', actual_data[1]['label'])
 
     def test_single_platform(self):
         config = Mock(name='trunk', min_rev_time=lambda env: 0, 
@@ -61,14 +63,15 @@ class TestResultsChartGeneratorTestCase(unittest.TestCase):
         req = Mock()
         generator = TestResultsChartGenerator(self.env)
         template, data = generator.generate_chart_data(req, config, 'test')
-        self.assertEqual('bitten_chart_tests.html', template)
+        self.assertEqual('json.txt', template)
+        data = data['json']
         self.assertEqual('Unit Tests', data['title'])
-        self.assertEqual('', data['data'][0][0])
-        self.assertEqual('[123]', data['data'][0][1])
-        self.assertEqual('Total', data['data'][1][0])
-        self.assertEqual(3, data['data'][1][1])
-        self.assertEqual('Failures', data['data'][2][0])
-        self.assertEqual(1, data['data'][2][1])
+        actual_data = data['data']
+        self.assertEqual('123', actual_data[0]['data'][0][0])
+        self.assertEqual('Total', actual_data[0]['label'])
+        self.assertEqual(3, actual_data[0]['data'][0][1])
+        self.assertEqual('Failures', actual_data[1]['label'])
+        self.assertEqual(1, actual_data[1]['data'][0][1])
 
     def test_multi_platform(self):
         config = Mock(name='trunk', min_rev_time=lambda env: 0, 
@@ -93,14 +96,19 @@ class TestResultsChartGeneratorTestCase(unittest.TestCase):
         req = Mock()
         generator = TestResultsChartGenerator(self.env)
         template, data = generator.generate_chart_data(req, config, 'test')
-        self.assertEqual('bitten_chart_tests.html', template)
+        self.assertEqual('json.txt', template)
+        data = data['json']
         self.assertEqual('Unit Tests', data['title'])
-        self.assertEqual('', data['data'][0][0])
-        self.assertEqual('[123]', data['data'][0][1])
-        self.assertEqual('Total', data['data'][1][0])
-        self.assertEqual(3, data['data'][1][1])
-        self.assertEqual('Failures', data['data'][2][0])
-        self.assertEqual(2, data['data'][2][1])
+        actual_data = data['data']
+        self.assertEqual('123', actual_data[0]['data'][0][0])
+        self.assertEqual('Total', actual_data[0]['label'])
+        self.assertEqual(3, actual_data[0]['data'][0][1])
+        self.assertEqual('123', actual_data[1]['data'][0][0])
+        self.assertEqual('Failures', actual_data[1]['label'])
+        self.assertEqual(2, actual_data[1]['data'][0][1])
+        self.assertEqual('123', actual_data[2]['data'][0][0])
+        self.assertEqual('Ignored', actual_data[2]['label'])
+        self.assertEqual(0, actual_data[2]['data'][0][1])
 
 
 class TestResultsSummarizerTestCase(unittest.TestCase):
@@ -144,7 +152,7 @@ class TestResultsSummarizerTestCase(unittest.TestCase):
         generator = TestResultsSummarizer(self.env)
         template, data = generator.render_summary(req,
                                             config, build, step, 'test')
-        self.assertEquals('bitten_summary_tests.html', template)
+        self.assertEquals('json.txt', template)
         self.assertEquals(data['totals'],
                 {'ignore': 0, 'failure': 1, 'success': 1, 'error': 1})
         for fixture in data['fixtures']:
