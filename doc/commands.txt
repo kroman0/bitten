@@ -105,6 +105,10 @@ Parameters
 +----------------+-----------------------------------------------------------+
 | ``args``       | Any arguments to pass to the executable or script         |
 +----------------+-----------------------------------------------------------+
+| `timeout`      | Limits the runtime of this command to the specified       |
+|                | number of seconds, after which it will be terminated.     |
++----------------+-----------------------------------------------------------+
+
 
 Either ``executable`` or ``file`` must be specified.
 
@@ -651,6 +655,10 @@ Parameters
 | ``output``     | Path to a file where any output by the script should be   |
 |                | recorded.                                                 |
 +----------------+-----------------------------------------------------------+
+| ``timeout``    | Limits the runtime of this command to the specified       |
+|                | number of seconds, after which it will be terminated.     |
++----------------+-----------------------------------------------------------+
+
 
 Either `file` or `module` must be specified.
 
@@ -692,6 +700,10 @@ Parameters
 | `options`      | Additional options to pass to the command, separated by   |
 |                | spaces                                                    |
 +----------------+-----------------------------------------------------------+
+| `timeout`      | Limits the runtime of this command to the specified       |
+|                | number of seconds, after which it will be terminated.     |
++----------------+-----------------------------------------------------------+
+
 
 Examples
 --------
