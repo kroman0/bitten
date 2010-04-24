@@ -281,13 +281,14 @@ class BuildMaster(Component):
         db = self.env.get_db_cnx()
 
         step = BuildStep(self.env, build=build.id, name=stepname)
-        try:
-            step.started = int(_parse_iso_datetime(elem.attr['time']))
-            step.stopped = step.started + float(elem.attr['duration'])
-        except ValueError, e:
-            self.log.error('Error parsing build step timestamp: %s', e,
-                           exc_info=True)
-            self._send_error(req, HTTP_BAD_REQUEST, e.args[0])
+
+        # not a great way to determine the start/stop time of the
+        # step, but it's a server time, which eliminates a bunch
+        # of skew issues.
+        now = int(time.time())
+        step.started = now - float(elem.attr['duration'])
+        step.stopped = now
+
         if elem.attr['status'] == 'failure':
             self.log.warning('Build %s step %s failed', build.id, stepname)
             step.status = BuildStep.FAILURE
@@ -375,14 +376,3 @@ class BuildMaster(Component):
                             'Location': req.abs_href.builds(
                                     build.id, 'steps', stepname)})
 
-
-def _parse_iso_datetime(string):
-    """Minimal parser for ISO date-time strings.
-    
-    Return the time as floating point number. Only handles UTC timestamps
-    without time zone information."""
-    try:
-        string = string.split('.', 1)[0] # strip out microseconds
-        return calendar.timegm(time.strptime(string, '%Y-%m-%dT%H:%M:%S'))
-    except ValueError, e:
-        raise ValueError('Invalid ISO date/time %r' % string)
