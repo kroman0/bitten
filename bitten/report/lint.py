@@ -115,7 +115,7 @@ FROM bitten_report AS report
   ON (item_category.report=report.id AND
     item_category.item=item_type.item AND
     item_category.name='category')
-WHERE report_category='lint' AND build=%s AND step=%s
+WHERE report.category='lint' AND build=%s AND step=%s
 ORDER BY item_type.value""", (build.id, step.name))
 
         file_data = {}
