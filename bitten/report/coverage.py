@@ -64,12 +64,16 @@ ORDER BY build.rev_time""" % (db.cast('item_lines.value', 'int'),
 
         data = {'title': 'Test Coverage',
                 'data': [
-                    [''] + ['[%s]' % item[0] for item in coverage],
-                    ['Lines of code'] + [item[1] for item in coverage],
-                    ['Coverage'] + [int(item[2]) for item in coverage]
-                ]}
-
-        return 'bitten_chart_coverage.html', data
+                    {'label': 'Lines of code', 'data': [[item[0], item[1]] for item in coverage], 'lines': {'fill': True}},
+                    {'label': 'Coverage', 'data': [[item[0], item[2]] for item in coverage]},
+                ],
+                'options': {
+                    'legend': {'position': 'sw', 'backgroundOpacity': 0.7},
+                    'xaxis': {'tickDecimals': 0},
+                    'yaxis': {'tickDecimals': 0},
+                },
+               }
+        return 'json.txt', {"json": data}
 
 
 class TestCoverageSummarizer(Component):
@@ -147,7 +151,7 @@ class TestCoverageAnnotator(Component):
     >>> rpt.insert()
 
     >>> ann = TestCoverageAnnotator(env)
-    >>> req = Mock(href=Href('/'), perm=MockPerm(), chrome={})
+    >>> req = Mock(href=Href('/'), perm=MockPerm(), chrome={}, args={})
 
     Version in the branch should not match:
     >>> context = Context.from_request(req, 'source', '/branches/blah/foo.py', 123)
@@ -202,9 +206,19 @@ class TestCoverageAnnotator(Component):
         add_stylesheet(context.req, 'bitten/bitten_coverage.css')
 
         resource = context.resource
-        self.log.debug("Looking for coverage report for %s@%s..." % (
-                        resource.id, str(resource.version)))
-        builds = Build.select(self.env, rev=resource.version)
+
+        # attempt to use the version passed in with the request,
+        # otherwise fall back to the latest version of this file.
+        try:
+            version = int(context.req.args['rev'])
+        except (KeyError, TypeError):
+            version = resource.version
+
+        builds = Build.select(self.env, rev=version)
+
+        self.log.debug("Looking for coverage report for %s@%s [%s]..." % (
+                        resource.id, str(resource.version), version))
+
         reports = []
         for build in builds:
             config = BuildConfig.fetch(self.env, build.config)

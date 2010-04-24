@@ -225,3 +225,7 @@
 .step-toc li { margin: 0; padding: 0 }
 .step-toc .active { background: #ff9; position: relative; }
 .step-toc li.failed a { color: #a00; font-weight: bold; }
+
+div.tickLabel { font-size: 10px; }
+td.legendLabel { font-size: 10px; }
+

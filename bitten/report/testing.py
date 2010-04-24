@@ -64,13 +64,18 @@ ORDER BY build.rev_time, build.platform""", (config.name,
 
         data = {'title': 'Unit Tests',
                 'data': [
-                    [''] + ['[%s]' % item[0] for item in tests],
-                    ['Total'] + [item[1] for item in tests],
-                    ['Failures'] + [item[2] for item in tests],
-                    ['Ignored'] + [item[3] for item in tests],
-                ]}
+                    {'label': 'Total', 'data': [[item[0], item[1]] for item in tests], 'lines': {'fill': True}},
+                    {'label': 'Failures', 'data': [[item[0], item[2]] for item in tests]},
+                    {'label': 'Ignored', 'data': [[item[0], item[3]] for item in tests]},
+                ],
+                'options': {
+                    'legend': {'position': 'sw', 'backgroundOpacity': 0.7},
+                    'xaxis': {'tickDecimals': 0},
+                    'yaxis': {'tickDecimals': 0},
+                },
+               }
 
-        return 'bitten_chart_tests.html', data
+        return 'json.txt', {"json": data}
 
 
 class TestResultsSummarizer(Component):
@@ -171,4 +176,4 @@ WHERE category='test' AND build=%s AND step=%s AND item_status.value<>'success' 
                            'failure': total_failure,
                            'error': total_error}
                }
-        return 'bitten_summary_tests.html', data
+        return 'json.txt', data

@@ -39,14 +39,15 @@ class PyLintChartGeneratorTestCase(unittest.TestCase):
                       max_rev_time=lambda env: 1000)
         generator = PyLintChartGenerator(self.env)
         template, data = generator.generate_chart_data(req, config, 'lint')
-        self.assertEqual('bitten_chart_lint.html', template)
+        self.assertEqual('json.txt', template)
+        data = data['json']
         self.assertEqual('Lint Problems by Type', data['title'])
-        self.assertEqual('Revision', data['data'][0][0])
-        self.assertEqual('Total Problems', data['data'][1][0])
-        self.assertEqual('Convention', data['data'][2][0])
-        self.assertEqual('Error', data['data'][3][0])
-        self.assertEqual('Refactor', data['data'][4][0])
-        self.assertEqual('Warning', data['data'][5][0])
+        actual_data = data['data']
+        self.assertEqual('Total Problems', actual_data[0]['label'])
+        self.assertEqual('Convention', actual_data[1]['label'])
+        self.assertEqual('Error', actual_data[2]['label'])
+        self.assertEqual('Refactor', actual_data[3]['label'])
+        self.assertEqual('Warning', actual_data[4]['label'])
 
     def test_single_platform(self):
         config = Mock(name='trunk', min_rev_time=lambda env: 0, 
@@ -65,21 +66,22 @@ class PyLintChartGeneratorTestCase(unittest.TestCase):
         req = Mock()
         generator = PyLintChartGenerator(self.env)
         template, data = generator.generate_chart_data(req, config, 'lint')
-        self.assertEqual('bitten_chart_lint.html', template)
+        self.assertEqual('json.txt', template)
+        data = data['json']
         self.assertEqual('Lint Problems by Type', data['title'])
-        self.assertEqual('Revision', data['data'][0][0])
-        self.assertEqual('[123]', data['data'][0][1])
+        actual_data = data['data']
+        self.assertEqual('123', actual_data[0]['data'][0][0])
 
-        self.assertEqual('Total Problems', data['data'][1][0])
-        self.assertEqual(10, data['data'][1][1])
-        self.assertEqual('Convention', data['data'][2][0])
-        self.assertEqual(1, data['data'][2][1])
-        self.assertEqual('Error', data['data'][3][0])
-        self.assertEqual(3, data['data'][3][1])
-        self.assertEqual('Refactor', data['data'][4][0])
-        self.assertEqual(4, data['data'][4][1])
-        self.assertEqual('Warning', data['data'][5][0])
-        self.assertEqual(2, data['data'][5][1])
+        self.assertEqual('Total Problems', actual_data[0]['label'])
+        self.assertEqual(10, actual_data[0]['data'][0][1])
+        self.assertEqual('Convention', actual_data[1]['label'])
+        self.assertEqual(1, actual_data[1]['data'][0][1])
+        self.assertEqual('Error', actual_data[2]['label'])
+        self.assertEqual(3, actual_data[2]['data'][0][1])
+        self.assertEqual('Refactor', actual_data[3]['label'])
+        self.assertEqual(4, actual_data[3]['data'][0][1])
+        self.assertEqual('Warning', actual_data[4]['label'])
+        self.assertEqual(2, actual_data[4]['data'][0][1])
 
     def test_multi_platform(self):
         config = Mock(name='trunk', min_rev_time=lambda env: 0, 
@@ -102,21 +104,22 @@ class PyLintChartGeneratorTestCase(unittest.TestCase):
         req = Mock()
         generator = PyLintChartGenerator(self.env)
         template, data = generator.generate_chart_data(req, config, 'lint')
-        self.assertEqual('bitten_chart_lint.html', template)
+        self.assertEqual('json.txt', template)
+        data = data['json']
         self.assertEqual('Lint Problems by Type', data['title'])
-        self.assertEqual('Revision', data['data'][0][0])
-        self.assertEqual('[123]', data['data'][0][1])
+        actual_data = data['data']
+        self.assertEqual('123', actual_data[0]['data'][0][0])
 
-        self.assertEqual('Total Problems', data['data'][1][0])
-        self.assertEqual(4, data['data'][1][1])
-        self.assertEqual('Convention', data['data'][2][0])
-        self.assertEqual(1, data['data'][2][1])
-        self.assertEqual('Error', data['data'][3][0])
-        self.assertEqual(1, data['data'][3][1])
-        self.assertEqual('Refactor', data['data'][4][0])
-        self.assertEqual(1, data['data'][4][1])
-        self.assertEqual('Warning', data['data'][5][0])
-        self.assertEqual(1, data['data'][5][1])
+        self.assertEqual('Total Problems', actual_data[0]['label'])
+        self.assertEqual(4, actual_data[0]['data'][0][1])
+        self.assertEqual('Convention', actual_data[1]['label'])
+        self.assertEqual(1, actual_data[1]['data'][0][1])
+        self.assertEqual('Error', actual_data[2]['label'])
+        self.assertEqual(1, actual_data[2]['data'][0][1])
+        self.assertEqual('Refactor', actual_data[3]['label'])
+        self.assertEqual(1, actual_data[3]['data'][0][1])
+        self.assertEqual('Warning', actual_data[4]['label'])
+        self.assertEqual(1, actual_data[4]['data'][0][1])
 
 
 def suite():

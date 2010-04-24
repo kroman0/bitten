@@ -43,11 +43,12 @@ class TestCoverageChartGeneratorTestCase(unittest.TestCase):
                       max_rev_time=lambda env: 1000)
         generator = TestCoverageChartGenerator(self.env)
         template, data = generator.generate_chart_data(req, config, 'coverage')
-        self.assertEqual('bitten_chart_coverage.html', template)
+        self.assertEqual('json.txt', template)
+        data = data['json']
         self.assertEqual('Test Coverage', data['title'])
-        self.assertEqual('', data['data'][0][0])
-        self.assertEqual('Lines of code', data['data'][1][0])
-        self.assertEqual('Coverage', data['data'][2][0])
+        actual_data = data['data']
+        self.assertEqual('Lines of code', actual_data[0]['label'])
+        self.assertEqual('Coverage', actual_data[1]['label'])
 
     def test_single_platform(self):
         config = Mock(name='trunk', min_rev_time=lambda env: 0, 
@@ -63,14 +64,15 @@ class TestCoverageChartGeneratorTestCase(unittest.TestCase):
         req = Mock()
         generator = TestCoverageChartGenerator(self.env)
         template, data = generator.generate_chart_data(req, config, 'coverage')
-        self.assertEqual('bitten_chart_coverage.html', template)
+        self.assertEqual('json.txt', template)
+        data = data['json']
         self.assertEqual('Test Coverage', data['title'])
-        self.assertEqual('', data['data'][0][0])
-        self.assertEqual('[123]', data['data'][0][1])
-        self.assertEqual('Lines of code', data['data'][1][0])
-        self.assertEqual(12, data['data'][1][1])
-        self.assertEqual('Coverage', data['data'][2][0])
-        self.assertEqual(3, data['data'][2][1])
+        actual_data = data['data']
+        self.assertEqual('123', actual_data[0]['data'][0][0])
+        self.assertEqual('Lines of code', actual_data[0]['label'])
+        self.assertEqual(12, actual_data[0]['data'][0][1])
+        self.assertEqual('Coverage', actual_data[1]['label'])
+        self.assertEqual(3, actual_data[1]['data'][0][1])
 
     def test_multi_platform(self):
         config = Mock(name='trunk', min_rev_time=lambda env: 0, 
@@ -93,14 +95,15 @@ class TestCoverageChartGeneratorTestCase(unittest.TestCase):
         req = Mock()
         generator = TestCoverageChartGenerator(self.env)
         template, data = generator.generate_chart_data(req, config, 'coverage')
-        self.assertEqual('bitten_chart_coverage.html', template)
+        self.assertEqual('json.txt', template)
+        data = data['json']
         self.assertEqual('Test Coverage', data['title'])
-        self.assertEqual('', data['data'][0][0])
-        self.assertEqual('[123]', data['data'][0][1])
-        self.assertEqual('Lines of code', data['data'][1][0])
-        self.assertEqual(12, data['data'][1][1])
-        self.assertEqual('Coverage', data['data'][2][0])
-        self.assertEqual(6, data['data'][2][1])
+        actual_data = data['data']
+        self.assertEqual('123', actual_data[0]['data'][0][0])
+        self.assertEqual('Lines of code', actual_data[0]['label'])
+        self.assertEqual(12, actual_data[0]['data'][0][1])
+        self.assertEqual('Coverage', actual_data[1]['label'])
+        self.assertEqual(6, actual_data[1]['data'][0][1])
 
 
 def suite():
