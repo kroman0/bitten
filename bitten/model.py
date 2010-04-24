@@ -587,6 +587,7 @@ class BuildStep(object):
 
     # Step status codes
     SUCCESS = 'S'
+    IN_PROGRESS = 'I'
     FAILURE = 'F'
 
     def __init__(self, env, build=None, name=None, description=None,
@@ -610,7 +611,8 @@ class BuildStep(object):
                       doc='Whether this build step exists in the database')
     successful = property(fget=lambda self: self.status == BuildStep.SUCCESS,
                           doc='Whether the build step was successful')
-
+    completed = property(fget=lambda self: self.status == BuildStep.SUCCESS or self.status == BuildStep.FAILURE,
+                          doc='Whether this build step has completed processing')
     def delete(self, db=None):
         """Remove the build step from the database."""
         if not db:
@@ -645,7 +647,7 @@ class BuildStep(object):
             handle_ta = False
 
         assert self.build and self.name
-        assert self.status in (self.SUCCESS, self.FAILURE)
+        assert self.status in (self.SUCCESS, self.IN_PROGRESS, self.FAILURE)
 
         cursor = db.cursor()
         cursor.execute("INSERT INTO bitten_step (build,name,description,status,"
@@ -694,7 +696,7 @@ class BuildStep(object):
         if not db:
             db = env.get_db_cnx()
 
-        assert status in (None, BuildStep.SUCCESS, BuildStep.FAILURE)
+        assert status in (None, BuildStep.SUCCESS, BuildStep.IN_PROGRESS, BuildStep.FAILURE)
 
         where_clauses = []
         if build is not None:
@@ -709,7 +711,7 @@ class BuildStep(object):
             where = ""
 
         cursor = db.cursor()
-        cursor.execute("SELECT build,name FROM bitten_step %s ORDER BY stopped"
+        cursor.execute("SELECT build,name FROM bitten_step %s ORDER BY started"
                        % where, [wc[1] for wc in where_clauses])
         for build, name in cursor:
             yield BuildStep.fetch(env, build, name, db=db)

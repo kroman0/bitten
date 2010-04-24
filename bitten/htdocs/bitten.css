@@ -93,8 +93,12 @@
   list-style-type: none; margin: .5em 0 0; padding: 0;
 }
 #content.build #builds ul.steps li.success,
+#content.build #builds ul.steps li.in-progress,
 #content.build #builds ul.steps li.failed {
   border: 1px solid; margin: 1px 0; padding: 0 2px 0 12px;
+}
+#content.build #builds ul.steps li.in-progress {
+  background: #dd9; border-color: #966; color: #993;
 }
 #content.build #builds ul.steps li.success {
   background: #9d9; border-color: #696; color: #393;
