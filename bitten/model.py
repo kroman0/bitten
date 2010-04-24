@@ -14,6 +14,8 @@ from trac.attachment import Attachment
 from trac.db import Table, Column, Index
 from trac.resource import Resource
 from trac.util.text import to_unicode
+from trac.util.datefmt import to_timestamp, utcmin, utcmax
+from datetime import datetime
 import codecs
 import os
 
@@ -185,6 +187,36 @@ class BuildConfig(object):
             yield config
 
     select = classmethod(select)
+
+    def min_rev_time(self, env):
+        """Returns the time of the minimum revision being built for this
+        configuration. Returns utcmin if not specified.
+        """
+        repos = env.get_repository()
+        
+        min_time = utcmin
+	if self.min_rev:
+            min_time = repos.get_changeset(self.min_rev).date
+
+        if isinstance(min_time, datetime): # Trac>=0.11
+            min_time = to_timestamp(min_time)
+
+        return min_time
+
+    def max_rev_time(self, env):
+        """Returns the time of the maximum revision being built for this
+        configuration. Returns utcmax if not specified.
+        """
+        repos = env.get_repository()
+
+        max_time = utcmax
+	if self.max_rev:
+            max_time = repos.get_changeset(self.max_rev).date
+
+        if isinstance(max_time, datetime): # Trac>=0.11
+            max_time = to_timestamp(max_time)
+
+        return max_time
 
 
 class TargetPlatform(object):

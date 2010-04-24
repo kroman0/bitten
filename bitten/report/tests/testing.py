@@ -37,7 +37,8 @@ class TestResultsChartGeneratorTestCase(unittest.TestCase):
 
     def test_no_reports(self):
         req = Mock()
-        config = Mock(name='trunk')
+        config = Mock(name='trunk', min_rev_time=lambda env: 0, 
+                      max_rev_time=lambda env: 1000)
         generator = TestResultsChartGenerator(self.env)
         template, data = generator.generate_chart_data(req, config, 'test')
         self.assertEqual('bitten_chart_tests.html', template)
@@ -47,7 +48,8 @@ class TestResultsChartGeneratorTestCase(unittest.TestCase):
         self.assertEqual('Failures', data['data'][2][0])
 
     def test_single_platform(self):
-        config = Mock(name='trunk')
+        config = Mock(name='trunk', min_rev_time=lambda env: 0, 
+                      max_rev_time=lambda env: 1000)
         build = Build(self.env, config='trunk', platform=1, rev=123,
                       rev_time=42)
         build.insert()
@@ -69,7 +71,8 @@ class TestResultsChartGeneratorTestCase(unittest.TestCase):
         self.assertEqual(1, data['data'][2][1])
 
     def test_multi_platform(self):
-        config = Mock(name='trunk')
+        config = Mock(name='trunk', min_rev_time=lambda env: 0, 
+                      max_rev_time=lambda env: 1000)
 
         build = Build(self.env, config='trunk', platform=1, rev=123,
                       rev_time=42)
@@ -114,7 +117,9 @@ class TestResultsSummarizerTestCase(unittest.TestCase):
                 cursor.execute(stmt)
 
     def test_testcase_errors_and_failures(self):
-        config = Mock(name='trunk', path='/somewhere')
+        config = Mock(name='trunk', path='/somewhere', 
+                      min_rev_time=lambda env: 0, 
+                      max_rev_time=lambda env: 1000)
         step = Mock(name='foo')
 
         build = Build(self.env, config=config.name, platform=1, rev=123,

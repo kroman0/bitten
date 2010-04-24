@@ -35,7 +35,8 @@ class PyLintChartGeneratorTestCase(unittest.TestCase):
 
     def test_no_reports(self):
         req = Mock()
-        config = Mock(name='trunk')
+        config = Mock(name='trunk', min_rev_time=lambda env: 0, 
+                      max_rev_time=lambda env: 1000)
         generator = PyLintChartGenerator(self.env)
         template, data = generator.generate_chart_data(req, config, 'lint')
         self.assertEqual('bitten_chart_lint.html', template)
@@ -48,7 +49,8 @@ class PyLintChartGeneratorTestCase(unittest.TestCase):
         self.assertEqual('Warning', data['data'][5][0])
 
     def test_single_platform(self):
-        config = Mock(name='trunk')
+        config = Mock(name='trunk', min_rev_time=lambda env: 0, 
+                      max_rev_time=lambda env: 1000)
         build = Build(self.env, config='trunk', platform=1, rev=123,
                       rev_time=42)
         build.insert()
@@ -80,7 +82,8 @@ class PyLintChartGeneratorTestCase(unittest.TestCase):
         self.assertEqual(2, data['data'][5][1])
 
     def test_multi_platform(self):
-        config = Mock(name='trunk')
+        config = Mock(name='trunk', min_rev_time=lambda env: 0, 
+                      max_rev_time=lambda env: 1000)
 
         build = Build(self.env, config='trunk', platform=1, rev=123,
                       rev_time=42)
