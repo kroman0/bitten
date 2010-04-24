@@ -125,6 +125,34 @@ def add_recipe_to_config(env, db):
                    "max_rev,label,description) SELECT name,path,0,'',NULL,"
                    "NULL,label,description FROM old_config")
 
+def add_last_activity_to_build(env, db):
+    """Add a column for storing the last activity to the build table."""
+    from trac.db import Table, Column, Index
+    cursor = db.cursor()
+
+    build_table_schema_v12 = Table('bitten_build', key='id')[
+            Column('id', auto_increment=True), Column('config'), Column('rev'),
+            Column('rev_time', type='int'), Column('platform', type='int'),
+            Column('slave'), Column('started', type='int'),
+            Column('stopped', type='int'), Column('status', size=1),
+            Column('last_activity', type='int'),
+            Index(['config', 'rev', 'platform'], unique=True)
+        ]
+
+    cursor.execute("CREATE TEMPORARY TABLE old_build_v11 AS "
+                   "SELECT * FROM bitten_build")
+    cursor.execute("DROP TABLE bitten_build")
+
+    connector, _ = DatabaseManager(env)._get_connector()
+    for stmt in connector.to_sql(build_table_schema_v12):
+        cursor.execute(stmt)
+
+    # it's safe to make the last activity the stop time of the build
+    cursor.execute("INSERT INTO bitten_build (config,rev,rev_time,platform,"
+                   "slave,started,stopped,last_activity,status) "
+                   "SELECT config,rev,rev_time,platform,"
+                   "slave,started,stopped,stopped,status FROM old_build_v11")
+
 def add_config_to_reports(env, db):
     """Add the name of the build configuration as metadata to report documents
     stored in the BDB XML database."""
@@ -199,7 +227,7 @@ def add_report_tables(env, db):
 
 def xmldb_to_db(env, db):
     """Migrate report data from Berkeley DB XML to SQL database.
-    
+
     Depending on the number of reports stored, this might take rather long.
     After the upgrade is done, the bitten.dbxml file (and any BDB XML log files)
     may be deleted. BDB XML is no longer used by Bitten.
@@ -562,4 +590,5 @@ map = {
     9: [recreate_rule_with_int_id],
    10: [add_config_platform_rev_index_to_build, fix_sequences],
    11: [fix_log_levels_misnaming, remove_stray_log_levels_files],
+   12: [add_last_activity_to_build],
 }

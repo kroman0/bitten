@@ -55,7 +55,7 @@ class BuildMaster(Component):
     build_all = BoolOption('bitten', 'build_all', False, doc=
         """Whether to request builds of older revisions even if a younger
         revision has already been built.""")
-    
+
     stabilize_wait = IntOption('bitten', 'stabilize_wait', 0, doc=
         """The time in seconds to wait for the repository to stabilize before
         queuing up a new build.  This allows time for developers to check in
@@ -70,7 +70,7 @@ class BuildMaster(Component):
          """The directory on the server in which client log files will be stored.""")
 
     quick_status = BoolOption('bitten', 'quick_status', False, doc=
-         """Whether to show the current build status withing the Trac main 
+         """Whether to show the current build status withing the Trac main
             navigation bar""")
 
     def __init__(self):
@@ -151,7 +151,7 @@ class BuildMaster(Component):
         self._send_response(req, code, body=message, headers=headers)
 
     def _process_build_creation(self, req, slave_token):
-        queue = BuildQueue(self.env, build_all=self.build_all, 
+        queue = BuildQueue(self.env, build_all=self.build_all,
                            stabilize_wait=self.stabilize_wait,
                            timeout=self.slave_timeout)
         queue.populate()
@@ -224,6 +224,7 @@ class BuildMaster(Component):
         self.log.info('Build slave %r initiated build %d', build.slave,
                       build.id)
         build.started = int(time.time())
+        build.last_activity = build.started
         build.update()
 
         for listener in BuildSystem(self.env).listeners:
@@ -348,11 +349,12 @@ class BuildMaster(Component):
             attachment.insert(filename, fileobj, fileobj.len, db=db)
 
         # If this was the last step in the recipe we mark the build as
-        # completed
+        # completed otherwise just update last_activity
         if last_step:
             self.log.info('Slave %s completed build %d ("%s" as of [%s])',
                           build.slave, build.id, build.config, build.rev)
             build.stopped = step.stopped
+            build.last_activity = build.stopped
 
             # Determine overall outcome of the build by checking the outcome
             # of the individual steps against the "onerror" specification of
@@ -369,6 +371,9 @@ class BuildMaster(Component):
 
             build.update(db=db)
         else:
+            build.last_activity = step.stopped
+            build.update(db=db)
+
             # start the next step.
             for num, recipe_step in enumerate(recipe):
                 if num == index + 1:

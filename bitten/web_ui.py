@@ -676,7 +676,9 @@ class BuildController(Component):
             step.delete(db=db)
 
         build.slave = None
-        build.started = build.stopped = 0
+        build.started = 0
+        build.stopped = 0
+        build.last_activity = 0
         build.status = Build.PENDING
         build.slave_info = {}
         build.update()

@@ -170,6 +170,7 @@ class UpgradeScriptsTestCase(BaseUpgradeTestCase):
         'old_log_v5',
         'old_log_v8',
         'old_rule',
+        'old_build_v11',
     ]
 
     basic_data = [

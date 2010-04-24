@@ -392,12 +392,12 @@ class BuildQueueTestCase(unittest.TestCase):
         platform.insert()
         build1 = Build(self.env, config='test', platform=platform.id, rev=123,
                       rev_time=42, status=Build.IN_PROGRESS, slave='heinz',
-                      started=time.time() - 600) # Started ten minutes ago
+                      last_activity=time.time() - 600) # active ten minutes ago
         build1.insert()
 
         build2 = Build(self.env, config='test', platform=platform.id, rev=124,
                        rev_time=42, status=Build.IN_PROGRESS, slave='heinz',
-                       started=time.time() - 60) # Started a minute ago
+                       last_activity=time.time() - 60) # active a minute ago
         build2.insert()
 
         queue = BuildQueue(self.env, timeout=300) # 5 minutes timeout
