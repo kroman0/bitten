@@ -22,7 +22,8 @@ log = logging.getLogger('bitten.build.shtools')
 
 __docformat__ = 'restructuredtext en'
 
-def exec_(ctxt, executable=None, file_=None, output=None, args=None, dir_=None):
+def exec_(ctxt, executable=None, file_=None, output=None, args=None,
+          dir_=None, timeout=None):
     """Execute a program or shell script.
     
     :param ctxt: the build context
@@ -33,12 +34,15 @@ def exec_(ctxt, executable=None, file_=None, output=None, args=None, dir_=None):
     :param output: name of the file to which the output of the script should be
                    written
     :param args: command-line arguments to pass to the script
+    :param timeout: the number of seconds before the external process should
+                    be aborted (has same constraints as CommandLine)
     """
     assert executable or file_, \
         'Either "executable" or "file" attribute required'
 
     returncode = execute(ctxt, executable=executable, file_=file_,
-                         output=output, args=args, dir_=dir_)
+                         output=output, args=args, dir_=dir_,
+                         timeout=timeout)
     if returncode != 0:
         ctxt.error('Executing %s failed (error code %s)' % (executable or file_,
                                                             returncode))
@@ -69,7 +73,7 @@ def pipe(ctxt, executable=None, file_=None, input_=None, output=None,
                    % (executable or file_, returncode))
 
 def execute(ctxt, executable=None, file_=None, input_=None, output=None,
-            args=None, dir_=None, filter_=None):
+            args=None, dir_=None, filter_=None, timeout=None):
     """Generic external program execution.
     
     This function is not itself bound to a recipe command, but rather used from
@@ -86,6 +90,8 @@ def execute(ctxt, executable=None, file_=None, input_=None, output=None,
                    written
     :param args: command-line arguments to pass to the script
     :param filter\_: function to filter out messages from the executable stdout
+    :param timeout: the number of seconds before the external process should
+                    be aborted (has same constraints as CommandLine)
     """
     if args:
         if isinstance(args, basestring):
@@ -136,11 +142,14 @@ def execute(ctxt, executable=None, file_=None, input_=None, output=None,
     if not filter_:
         filter_=lambda s: s
 
+    if timeout:
+        timeout = int(timeout)
+
     try:
         cmdline = CommandLine(executable, args, input=input_file,
                               cwd=dir_, shell=shell)
         log_elem = xmlio.Fragment()
-        for out, err in cmdline.execute():
+        for out, err in cmdline.execute(timeout=timeout):
             if out is not None:
                 log.info(out)
                 info = filter_(out)

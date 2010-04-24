@@ -110,7 +110,7 @@ class CommandLine(object):
             raise BuildError('Error executing %s: %s %s' % (args,
                                         e.__class__.__name__, str(e)))
 
-        log.debug('Executing %s, (pid = %s)', args, p.pid)
+        log.debug('Executing %s, (pid = %s, timeout = %s)', args, p.pid, timeout)
 
         if self.input:
             if isinstance(self.input, basestring):
@@ -130,7 +130,8 @@ class CommandLine(object):
 
         while True:
             if limit and limit < time.time():
-                if hasattr(subprocess, 'kill'): # Python 2.6+
+                if hasattr(p, 'kill'): # Python 2.6+
+                    log.debug('Killing process.')
                     p.kill()
                 raise TimeoutError('Command %s timed out' % self.executable)
             if p.poll() != None and self.returncode == None:

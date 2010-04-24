@@ -25,7 +25,7 @@ except NameError:
     from sets import Set as set
 
 from pkg_resources import WorkingSet
-from bitten.build import BuildError
+from bitten.build import BuildError, TimeoutError
 from bitten.build.config import Configuration
 from bitten.util import xmlio
 
@@ -226,7 +226,7 @@ class Step(object):
         for child in self._elem:
             try:
                 ctxt.run(self, child.namespace, child.name, child.attr)
-            except (BuildError, InvalidRecipeError), e:
+            except (BuildError, InvalidRecipeError, TimeoutError), e:
                 ctxt.error(e)
         if time.time() < last_finish + 1:
             # Add a delay to make sure steps appear in correct order

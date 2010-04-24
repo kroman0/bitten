@@ -43,7 +43,8 @@ def _python_path(ctxt):
         return python_path
     return sys.executable
 
-def distutils(ctxt, file_='setup.py', command='build', options=None):
+def distutils(ctxt, file_='setup.py', command='build',
+              options=None, timeout=None):
     """Execute a ``distutils`` command.
     
     :param ctxt: the build context
@@ -51,6 +52,8 @@ def distutils(ctxt, file_='setup.py', command='build', options=None):
     :param file\_: name of the file defining the distutils setup
     :param command: the setup command to execute
     :param options: additional options to pass to the command
+    :param timeout: the number of seconds before the external process should
+                    be aborted (has same constraints as CommandLine)
     """
     if options:
         if isinstance(options, basestring):
@@ -58,12 +61,15 @@ def distutils(ctxt, file_='setup.py', command='build', options=None):
     else:
         options = []
 
+    if timeout:
+        timeout = int(timeout)
+
     cmdline = CommandLine(_python_path(ctxt),
                           [ctxt.resolve(file_), command] + options,
                           cwd=ctxt.basedir)
     log_elem = xmlio.Fragment()
     error_logged = False
-    for out, err in cmdline.execute():
+    for out, err in cmdline.execute(timeout):
         if out is not None:
             log.info(out)
             log_elem.append(xmlio.Element('message', level='info')[out])
@@ -84,7 +90,8 @@ def distutils(ctxt, file_='setup.py', command='build', options=None):
     if not error_logged and cmdline.returncode != 0:
         ctxt.error('distutils failed (%s)' % cmdline.returncode)
 
-def exec_(ctxt, file_=None, module=None, function=None, output=None, args=None):
+def exec_(ctxt, file_=None, module=None, function=None, 
+          output=None, args=None, timeout=None):
     """Execute a Python script.
     
     Either the `file_` or the `module` parameter must be provided. If
@@ -99,6 +106,8 @@ def exec_(ctxt, file_=None, module=None, function=None, output=None, args=None):
     :param function: name of the Python function to run
     :param output: name of the file to which output should be written
     :param args: extra arguments to pass to the script
+    :param timeout: the number of seconds before the external process should
+                    be aborted (has same constraints as CommandLine)
     """
     assert file_ or module, 'Either "file" or "module" attribute required'
     if function:
@@ -124,7 +133,8 @@ def exec_(ctxt, file_=None, module=None, function=None, output=None, args=None):
 
     from bitten.build import shtools
     returncode = shtools.execute(ctxt, executable=_python_path(ctxt),
-                                 file_=file_, output=output, args=args)
+                                 file_=file_, output=output, args=args,
+								 timeout=timeout)
     if returncode != 0:
         ctxt.error('Executing %s failed (error code %s)' % \
                        (file_ or function or module, returncode))
