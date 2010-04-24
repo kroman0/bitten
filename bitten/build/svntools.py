@@ -68,7 +68,7 @@ def copytree(src, dst, symlinks=False):
         raise Error, errors
 
 def checkout(ctxt, url, path=None, revision=None, dir_='.', verbose='false', shared_path=None,
-        username=None, password=None):
+        username=None, password=None, no_auth_cache='false'):
     """Perform a checkout from a Subversion repository.
     
     :param ctxt: the build context
@@ -81,6 +81,7 @@ def checkout(ctxt, url, path=None, revision=None, dir_='.', verbose='false', sha
     :param shared_path: a shared directory to do the checkout in, before copying to dir\_
     :param username: a username of the repository
     :param password: a password of the repository
+    :param no\_auth\_cache: do not cache authentication tokens
     """
     args = ['checkout']
     if revision:
@@ -93,6 +94,8 @@ def checkout(ctxt, url, path=None, revision=None, dir_='.', verbose='false', sha
         args += ['--username', username]
     if password:
         args += ['--password', password]
+    if no_auth_cache.lower() == 'true':
+        args += ['--no-auth-cache']
     args += [final_url, dir_]
 
     cofilter = None
@@ -113,7 +116,8 @@ def checkout(ctxt, url, path=None, revision=None, dir_='.', verbose='false', sha
     if returncode != 0:
         ctxt.error('svn checkout failed (%s)' % returncode)
 
-def export(ctxt, url, path=None, revision=None, dir_='.', username=None, password=None):
+def export(ctxt, url, path=None, revision=None, dir_='.',
+        username=None, password=None, no_auth_cache='false'):
     """Perform an export from a Subversion repository.
     
     :param ctxt: the build context
@@ -124,6 +128,7 @@ def export(ctxt, url, path=None, revision=None, dir_='.', username=None, passwor
     :param dir\_: the name of a local subdirectory to export out into
     :param username: a username of the repository
     :param password: a password of the repository
+    :param no\_auth\_cache: do not cache authentication tokens
     """
     args = ['export', '--force']
     if revision:
@@ -134,6 +139,8 @@ def export(ctxt, url, path=None, revision=None, dir_='.', username=None, passwor
         args += ['--username', username]
     if password:
         args += ['--password', password]
+    if no_auth_cache.lower() == 'true':
+        args += ['--no-auth-cache']
     args += [url, dir_]
 
     from bitten.build import shtools
@@ -141,17 +148,27 @@ def export(ctxt, url, path=None, revision=None, dir_='.', username=None, passwor
     if returncode != 0:
         ctxt.error('svn export failed (%s)' % returncode)
 
-def update(ctxt, revision=None, dir_='.'):
+def update(ctxt, revision=None, dir_='.',
+        username=None, password=None, no_auth_cache='false'):
     """Update the local working copy from the Subversion repository.
     
     :param ctxt: the build context
     :type ctxt: `Context`
     :param revision: the revision to check out
     :param dir\_: the name of a local subdirectory containing the working copy
+    :param username: a username of the repository
+    :param password: a password of the repository
+    :param no\_auth\_cache: do not cache authentication tokens
     """
     args = ['update']
     if revision:
         args += ['-r', revision]
+    if username:
+        args += ['--username', username]
+    if password:
+        args += ['--password', password]
+    if no_auth_cache.lower() == 'true':
+        args += ['--no-auth-cache']
     args += [dir_]
 
     from bitten.build import shtools
