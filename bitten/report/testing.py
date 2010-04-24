@@ -35,8 +35,11 @@ FROM bitten_build AS build
  LEFT OUTER JOIN bitten_report_item AS item_status
   ON (item_status.report=report.id AND item_status.name='status')
 WHERE build.config=%s AND report.category='test'
+  AND build.rev_time >= %s AND build.rev_time <= %s
 GROUP BY build.rev_time, build.rev, build.platform, item_status.value
-ORDER BY build.rev_time, build.platform""", (config.name,))
+ORDER BY build.rev_time, build.platform""", (config.name,
+                                             config.min_rev_time(self.env),
+                                             config.max_rev_time(self.env)))
 
         prev_rev = None
         prev_platform, platform_total = None, 0

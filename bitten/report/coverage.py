@@ -42,11 +42,14 @@ FROM bitten_build AS build
   ON (item_percentage.report=report.id AND item_percentage.name='percentage' AND
       item_percentage.item=item_lines.item)
 WHERE build.config=%%s AND report.category='coverage'
+  AND build.rev_time >= %%s AND build.rev_time <= %%s
 GROUP BY build.rev_time, build.rev, build.platform
 ORDER BY build.rev_time""" % (db.cast('item_lines.value', 'int'),
                               db.cast('item_lines.value', 'int'),
                               db.cast('item_percentage.value', 'int')),
-                              (config.name,))
+                              (config.name, 
+                               config.min_rev_time(self.env),
+                               config.max_rev_time(self.env)))
 
         prev_rev = None
         coverage = []

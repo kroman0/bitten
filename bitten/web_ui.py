@@ -13,6 +13,7 @@
 import posixpath
 import re
 from StringIO import StringIO
+from datetime import datetime
 
 import pkg_resources
 from genshi.builder import tag
@@ -391,11 +392,13 @@ class BuildConfigController(Component):
 
         if has_reports:
             chart_generators = []
+            report_categories = list(self._report_categories_for_config(config))
             for generator in ReportChartController(self.env).generators: 
                 for category in generator.get_supported_categories(): 
-                    chart_generators.append({
-                        'href': req.href.build(config.name, 'chart/' + category) 
-                    })
+                    if category in report_categories:
+                        chart_generators.append({
+                            'href': req.href.build(config.name, 'chart/' + category) 
+                        })
             data['config']['charts'] = chart_generators 
             charts_license = self.config.get('bitten', 'charts_license')
             if charts_license:
@@ -449,6 +452,26 @@ class BuildConfigController(Component):
         else:
             prevnext_nav (req, 'Page')
         return data
+
+    def _report_categories_for_config(self, config):
+        """Yields the categories of reports that exist for active builds
+        of this configuration.
+        """
+           
+        db = self.env.get_db_cnx()
+        repos = self.env.get_repository()
+        cursor = db.cursor()
+        
+        cursor.execute("""SELECT DISTINCT report.category as category
+FROM bitten_build AS build 
+JOIN bitten_report AS report ON (report.build=build.id)
+WHERE build.config=%s AND build.rev_time >= %s AND build.rev_time <= %s""", 
+                       (config.name, 
+                        config.min_rev_time(self.env),
+                        config.max_rev_time(self.env)))
+
+        for (category,) in cursor:
+            yield category
 
 
 class BuildController(Component):
@@ -672,10 +695,10 @@ class BuildController(Component):
             if summarizer:
                 tmpl, data = summarizer.render_summary(req, config, build,
                                                         step, report.category)
+                reports.append({'category': report.category,
+                                'template': tmpl, 'data': data})
             else:
                 tmpl = data = None
-            reports.append({'category': report.category,
-                            'template': tmpl, 'data': data})
         return reports
 
 

@@ -39,7 +39,8 @@ class TestCoverageChartGeneratorTestCase(unittest.TestCase):
 
     def test_no_reports(self):
         req = Mock()
-        config = Mock(name='trunk')
+        config = Mock(name='trunk', min_rev_time=lambda env: 0, 
+                      max_rev_time=lambda env: 1000)
         generator = TestCoverageChartGenerator(self.env)
         template, data = generator.generate_chart_data(req, config, 'coverage')
         self.assertEqual('bitten_chart_coverage.html', template)
@@ -49,7 +50,8 @@ class TestCoverageChartGeneratorTestCase(unittest.TestCase):
         self.assertEqual('Coverage', data['data'][2][0])
 
     def test_single_platform(self):
-        config = Mock(name='trunk')
+        config = Mock(name='trunk', min_rev_time=lambda env: 0, 
+                      max_rev_time=lambda env: 1000)
         build = Build(self.env, config='trunk', platform=1, rev=123,
                       rev_time=42)
         build.insert()
@@ -71,7 +73,8 @@ class TestCoverageChartGeneratorTestCase(unittest.TestCase):
         self.assertEqual(3, data['data'][2][1])
 
     def test_multi_platform(self):
-        config = Mock(name='trunk')
+        config = Mock(name='trunk', min_rev_time=lambda env: 0, 
+                      max_rev_time=lambda env: 1000)
         build = Build(self.env, config='trunk', platform=1, rev=123,
                       rev_time=42)
         build.insert()
