@@ -16,7 +16,7 @@ import tempfile
 import unittest
 
 from bitten.build import javatools
-from bitten.recipe import Context
+from bitten.recipe import Context, Recipe
 
 class CoberturaTestCase(unittest.TestCase):
     xml_template="""<?xml version="1.0"?>
@@ -181,6 +181,34 @@ class PyTestTestCase(unittest.TestCase):
         self.assertEqual('traceback', trace.name)
         self.assertEqual(1, len(trace.children))
         self.assertEqual('request = <FuncargRequest for <Function...', trace.children[0])
+
+        type, category, generator, xml = self.ctxt.output.pop()
+        self.assertEqual(Recipe.ERROR, type)
+
+        self.assertEqual(0, len(self.ctxt.output))
+
+    def test_skipped_tests(self):
+        """Check that skipped tests (here: xfail in py.test) are not considered an error"""
+        body = '<testcase classname="_test.test_event" name="test_simple" time="0.06">' \
+             + '<skipped/></testcase>'
+        filename = self._xml_file(body, skips=1)
+        javatools.junit(self.ctxt, file_=filename)
+        type, category, generator, xml = self.ctxt.output.pop()
+        self.assertEqual('report', type)
+        self.assertEqual('test', category)
+        self.assertEqual(1, len(xml.children))
+
+        elem = xml.children[0]
+        self.assertEqual('test', elem.name)
+        self.assertEqual('test_simple', elem.attr['name'])
+        self.assertEqual('ignore', elem.attr['status'])
+        self.assertEqual(1, len(elem.children))
+
+        trace = elem.children[0]
+        self.assertEqual('traceback', trace.name)
+        self.assertEqual(0, len(trace.children))
+
+        self.assertEqual(0, len(self.ctxt.output))
 
 def suite():
     suite = unittest.TestSuite()

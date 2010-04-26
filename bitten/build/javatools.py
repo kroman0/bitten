@@ -149,9 +149,16 @@ def junit(ctxt, file_=None, srcdir=None):
 
                     result = list(testcase.children())
                     if result:
-                        test.attr['status'] = result[0].name
+                        junit_status = result[0].name
                         test.append(xmlio.Element('traceback')[_fix_traceback(result)])
-                        failed += 1
+                        if junit_status == 'skipped':
+                            test.attr['status'] = 'ignore'
+                        elif junit_status == 'error':
+                            test.attr['status'] = 'error'
+                            failed += 1
+                        else:
+                            test.attr['status'] = 'failure'
+                            failed += 1
                     else:
                         test.attr['status'] = 'success'
 
