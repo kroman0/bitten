@@ -9,7 +9,9 @@
 # are also available at http://bitten.edgewall.org/wiki/License.
 
 """Automated upgrades for the Bitten database tables, and other data stored
-in the Trac environment."""
+in the Trac environment.
+
+**Do not import and call directly!**"""
 
 import os
 import sys
@@ -432,7 +434,7 @@ def migrate_logs_to_files(env, db):
     env.log.warning("We have dropped the bitten_log_message table - you may want to vaccuum/compress your database to save space")
 
 def fix_log_levels_misnaming(env, db):
-    """Renames or removes *.log.level files created by older versions of migrate_logs_to_files."""
+    """Renames or removes \*.log.level files created by older versions of migrate_logs_to_files."""
     logs_dir = env.config.get("bitten", "logs_dir", "log/bitten")
     if not os.path.isabs(logs_dir):
         logs_dir = os.path.join(env.path, logs_dir)
@@ -480,7 +482,8 @@ def fix_log_levels_misnaming(env, db):
     env.log.info("Deleted %d stray log level (%d errors)", delete_count, delete_error_count)
 
 def remove_stray_log_levels_files(env, db):
-    """Remove *.log.levels files without a matching *.log file (old Bitten versions did not delete .log.levels files when builds were deleted)"""
+    """Remove \*.log.levels files without a matching \*.log file (old Bitten
+    versions did not delete .log.levels files when builds were deleted)"""
     logs_dir = env.config.get("bitten", "logs_dir", "log/bitten")
     if not os.path.isabs(logs_dir):
         logs_dir = os.path.join(env.path, logs_dir)
