@@ -152,7 +152,7 @@ class TestResultsSummarizerTestCase(unittest.TestCase):
         generator = TestResultsSummarizer(self.env)
         template, data = generator.render_summary(req,
                                             config, build, step, 'test')
-        self.assertEquals('json.txt', template)
+        self.assertEquals('bitten_summary_tests.html', template)
         self.assertEquals(data['totals'],
                 {'ignore': 0, 'failure': 1, 'success': 1, 'error': 1})
         for fixture in data['fixtures']:
