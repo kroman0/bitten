@@ -20,6 +20,8 @@
 # If that's not present, we have a copy of the to_json method, which we will remove once Trac 0.11 support is removed
 # And finally, the to_json method requires trac.util.text.javascript_quote, which is only present from Trac 0.11.3, so we have a copy of that too
 
+import re
+
 try:
     # to_json is present from Trac 0.12 onwards - should remove once Trac 0.11 support is removed
     from trac.util.presentation import to_json
