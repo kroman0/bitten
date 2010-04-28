@@ -37,6 +37,7 @@ from bitten.master import BuildMaster
 from bitten.model import BuildConfig, TargetPlatform, Build, BuildStep, \
                          BuildLog, Report
 from bitten.queue import collect_changes
+from bitten.util import json
 
 _status_label = {Build.PENDING: 'pending',
                  Build.IN_PROGRESS: 'in progress',
@@ -720,17 +721,6 @@ class ReportChartController(Component):
     generators = ExtensionPoint(IReportChartGenerator)
 
     # IRequestHandler methods
-
-    def _get_dumps(self):
-        try:
-            import json
-            return json.dumps
-        except ImportError:
-            pass
-
-        import simplejson
-        return simplejson.dumps
-
     def match_request(self, req):
         match = re.match(r'/build/([\w.-]+)/chart/(\w+)', req.path_info)
         if match:
@@ -750,7 +740,7 @@ class ReportChartController(Component):
         else:
             raise TracError('Unknown report category "%s"' % category)
 
-        data['dumps'] = self._get_dumps()
+        data['dumps'] = json.to_json
 
         return tmpl, data, 'text/plain'
 
