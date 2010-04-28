@@ -176,4 +176,4 @@ WHERE category='test' AND build=%s AND step=%s AND item_status.value<>'success' 
                            'failure': total_failure,
                            'error': total_error}
                }
-        return 'json.txt', data
+        return 'bitten_summary_tests.html', data
