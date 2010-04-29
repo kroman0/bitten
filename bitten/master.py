@@ -128,6 +128,8 @@ class BuildMaster(Component):
 
         if req.args['collection'] == 'steps':
             return self._process_build_step(req, config, build)
+        elif req.args['collection'] == 'keepalive':
+            return self._process_keepalive(req, config, build)
         else:
             self._send_error(req, HTTP_NOT_FOUND,
                     "No such collection '%s'" % req.args['collection'])
@@ -164,7 +166,18 @@ class BuildMaster(Component):
             self._send_error(req, HTTP_BAD_REQUEST, 'XML parser error')
 
         slave_version = int(elem.attr.get('version', 1))
-        if slave_version != PROTOCOL_VERSION:
+
+        # FIXME: Remove version compatibility code.
+        # The initial difference between protocol version 3 and 4 is that
+        # the master allows keepalive requests-- the master must be
+        # at least 4 before slaves supporting version 4 are allowed. When
+        # the first force master/slave upgrade requirement comes in
+        # (or we bump the) version number again, remove this code.
+        if slave_version == 3 and PROTOCOL_VERSION == 4:
+            self.log.info('Allowing slave version %d to process build for '
+                          'compatibility. Upgrade slave to support build '
+                          'keepalives.', slave_version)
+        elif slave_version != PROTOCOL_VERSION:
             self._send_error(req, HTTP_BAD_REQUEST,
                     "Master-Slave version mismatch: master=%d, slave=%d" % \
                                 (PROTOCOL_VERSION, slave_version))
@@ -397,6 +410,20 @@ class BuildMaster(Component):
                             'Content-Length': str(len(body)),
                             'Location': req.abs_href.builds(
                                     build.id, 'steps', stepname)})
+
+    def _process_keepalive(self, req, config, build):
+        build.last_activity = int(time.time())
+        build.update()
+
+        self.log.info('Slave %s build %d keepalive ("%s" as of [%s])',
+                      build.slave, build.id, build.config, build.rev)
+
+        body = 'Keepalive processed'
+        self._send_response(req, 200, body, {
+                            'Content-Type': 'text/plain',
+                            'Content-Length': str(len(body)),
+                            'Location': req.abs_href.builds(
+                                    build.id, 'keepalive')})
 
     def _start_new_step(self, build, stepname):
         """Creates the in-memory representation for a newly started

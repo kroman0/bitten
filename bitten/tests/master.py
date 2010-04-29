@@ -178,7 +178,7 @@ class BuildMasterTestCase(unittest.TestCase):
         inbody = StringIO("""<slave name="hal" version="%d">
   <platform>Power Macintosh</platform>
   <os family="posix" version="8.1.0">Darwin</os>
-</slave>""" % (PROTOCOL_VERSION-1,))
+</slave>""" % (PROTOCOL_VERSION-2,))
         outheaders = {}
         outbody = StringIO()
         req = Mock(method='POST', base_path='', path_info='/builds',
@@ -197,7 +197,7 @@ class BuildMasterTestCase(unittest.TestCase):
 
         self.assertEqual(400, outheaders['Status'])
         self.assertEqual('Master-Slave version mismatch: master=%d, slave=%d' \
-                                % (PROTOCOL_VERSION, PROTOCOL_VERSION-1),
+                                % (PROTOCOL_VERSION, PROTOCOL_VERSION-2),
                             outbody.getvalue())
 
     def test_create_build_protocol_no_version(self):
