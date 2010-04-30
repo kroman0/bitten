@@ -150,9 +150,9 @@ def add_last_activity_to_build(env, db):
         cursor.execute(stmt)
 
     # it's safe to make the last activity the stop time of the build
-    cursor.execute("INSERT INTO bitten_build (config,rev,rev_time,platform,"
+    cursor.execute("INSERT INTO bitten_build (id,config,rev,rev_time,platform,"
                    "slave,started,stopped,last_activity,status) "
-                   "SELECT config,rev,rev_time,platform,"
+                   "SELECT id,config,rev,rev_time,platform,"
                    "slave,started,stopped,stopped,status FROM old_build_v11")
 
 def add_config_to_reports(env, db):
