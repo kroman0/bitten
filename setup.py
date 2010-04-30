@@ -82,7 +82,6 @@ class MasterFeature(Feature):
         dist.test_suite = 'bitten.tests.suite'
         dist.package_data = {
               'bitten': ['htdocs/*.*',
-                    'htdocs/charts_library/*.swf',
                     'templates/*.html',
                     'templates/*.txt']}
         dist.entry_points['trac.plugins'] = [
