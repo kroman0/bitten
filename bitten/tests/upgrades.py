@@ -190,14 +190,14 @@ class UpgradeScriptsTestCase(BaseUpgradeTestCase):
             ]
         ],
         ['bitten_build',
-            ('config', 'rev', 'platform', 'rev_time'), [
-                ('test_config', '123', 1, 456),
+            ('id', 'config', 'rev', 'platform', 'rev_time'), [
+                (12, 'test_config', '123', 1, 456),
             ]
         ],
         ['bitten_step',
             ('build', 'name', 'log'), [
-                (1, 'step1', None),
-                (1, 'step2', "line1\nline2"),
+                (12, 'step1', None),
+                (12, 'step2', "line1\nline2"),
             ]
         ],
     ]
@@ -247,19 +247,20 @@ class UpgradeScriptsTestCase(BaseUpgradeTestCase):
         self.assertEqual(platforms[0].name, 'test_plat')
 
         self.assertEqual(len(builds), 1)
+        self.assertEqual(builds[0].id, 12)
         self.assertEqual(builds[0].config, 'test_config')
         self.assertEqual(builds[0].rev, '123')
         self.assertEqual(builds[0].platform, 1)
         self.assertEqual(builds[0].rev_time, 456)
 
         self.assertEqual(len(steps), 2)
-        self.assertEqual(steps[0].build, 1)
+        self.assertEqual(steps[0].build, 12)
         self.assertEqual(steps[0].name, 'step1')
-        self.assertEqual(steps[1].build, 1)
+        self.assertEqual(steps[1].build, 12)
         self.assertEqual(steps[1].name, 'step2')
 
         self.assertEqual(len(logs), 1)
-        self.assertEqual(logs[0].build, 1)
+        self.assertEqual(logs[0].build, 12)
         self.assertEqual(logs[0].step, 'step2')
         log_file = logs[0].get_log_file(logs[0].filename)
         self.assertEqual(file(log_file, "rU").read(), "line1\nline2\n")
