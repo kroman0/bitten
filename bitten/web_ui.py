@@ -407,9 +407,6 @@ class BuildConfigController(Component):
                             'category': category,
                         })
             data['config']['charts'] = chart_generators
-            charts_license = self.config.get('bitten', 'charts_license')
-            if charts_license:
-                data['config']['charts_license'] = charts_license
 
         page = max(1, int(req.args.get('page', 1)))
         more = False
