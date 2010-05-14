@@ -355,9 +355,10 @@ class BuildSlave(object):
         build_id = build_url and int(build_url.split('/')[-1]) or 0
         xml = xmlio.parse(fileobj)
         basedir = ''
-        keepalive_thread = KeepAliveThread(self.opener, build_url, self.single_build, self.keepalive_interval)
         try:
             if not self.local:
+                keepalive_thread = KeepAliveThread(self.opener, build_url,
+                                    self.single_build, self.keepalive_interval)
                 keepalive_thread.start()
             recipe = Recipe(xml, os.path.join(self.work_dir, self.build_dir), 
                             self.config)
@@ -380,7 +381,8 @@ class BuildSlave(object):
             if self.dry_run:
                 self._cancel_build(build_url)
         finally:
-            keepalive_thread.stop()
+            if not self.local:
+                keepalive_thread.stop()
             if not self.keep_files and os.path.isdir(basedir):
                 log.debug('Removing build directory %s' % basedir)
                 _rmtree(basedir)
