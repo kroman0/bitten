@@ -30,7 +30,6 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ====================================================================
 
-This software includes a copy of XML/SWF charts, which is
-Copyright (C) 2004-2005 maani.us
-See http://www.maani.us/xml_charts/index.php?menu=License for more
-information.
+This software includes copies of external libraries:
+ - jquery.flot.js (MIT license)
+ - excanvas.js (Apache License, Version 2.0)
