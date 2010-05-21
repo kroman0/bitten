@@ -3,7 +3,6 @@ include COPYING
 include MANIFEST-SLAVE.in
 include README.txt
 include bitten/htdocs/*.*
-include bitten/htdocs/charts_library/*.swf
 include bitten/templates/*.*
 include doc/*.*
 include doc/api/*.*
