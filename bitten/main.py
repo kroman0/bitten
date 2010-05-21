@@ -152,6 +152,16 @@ class BuildSystem(Component):
         self.log.error("Unknown build/config resource.id: %s" % resource.id)
         return 'Unknown Build or Config'
 
+    def resource_exists(self, resource):
+        config_name, build_id = self._parse_resource(resource.id)
+        if build_id:
+            build = Build.fetch(self.env, build_id)
+            return build and build.exists or False
+        elif config_name:
+            config = BuildConfig.fetch(self.env, config_name)
+            return config and config.exists or False
+        return False
+
     def _parse_resource(self, resource_id):
         """ Returns a (config_name, build_id) tuple. """
         r = resource_id.split('/', 1)
