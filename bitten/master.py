@@ -70,8 +70,11 @@ class BuildMaster(Component):
          """The directory on the server in which client log files will be stored.""")
 
     quick_status = BoolOption('bitten', 'quick_status', False, doc=
-         """Whether to show the current build status withing the Trac main
-            navigation bar""")
+         """Whether to show the current build status within the Trac main
+            navigation bar. '''Note:''' The feature requires expensive database and
+            repository checks for every page request, and should not be enabled
+            if the project has a large repository or uses a non-Subversion
+            repository such as Mercurial or Git.""")
 
     def __init__(self):
         self.env.systeminfo.append(('Bitten',
