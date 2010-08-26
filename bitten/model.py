@@ -197,7 +197,7 @@ class BuildConfig(object):
                       'named "(default)" to Trac.'
         
         min_time = utcmin
-	if self.min_rev:
+        if self.min_rev:
             min_time = repos.get_changeset(self.min_rev).date
 
         if isinstance(min_time, datetime): # Trac>=0.11
@@ -214,7 +214,7 @@ class BuildConfig(object):
                       'named "(default)" to Trac.'
 
         max_time = utcmax
-	if self.max_rev:
+        if self.max_rev:
             max_time = repos.get_changeset(self.max_rev).date
 
         if isinstance(max_time, datetime): # Trac>=0.11
