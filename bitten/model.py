@@ -193,6 +193,8 @@ class BuildConfig(object):
         configuration. Returns utcmin if not specified.
         """
         repos = env.get_repository()
+        assert repos, 'No "(default)" Repository: Add a repository or alias ' \
+                      'named "(default)" to Trac.'
         
         min_time = utcmin
 	if self.min_rev:
@@ -208,6 +210,8 @@ class BuildConfig(object):
         configuration. Returns utcmax if not specified.
         """
         repos = env.get_repository()
+        assert repos, 'No "(default)" Repository: Add a repository or alias ' \
+                      'named "(default)" to Trac.'
 
         max_time = utcmax
 	if self.max_rev:

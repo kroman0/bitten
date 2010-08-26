@@ -192,6 +192,14 @@ class BuildQueueTestCase(unittest.TestCase):
         build = queue.get_build_for_slave('foobar', {})
         self.assertEqual(None, build)
 
+    def test_populate_no_repos(self):
+        """
+        Cannot work when there are no repositories defined.
+        """
+        self.env.get_repository = lambda: None
+        queue = BuildQueue(self.env)
+        self.assertRaises(AssertionError, queue.populate)
+
     def test_populate_not_build_all(self):
         self.env.get_repository = lambda authname=None: Mock(
             get_changeset=lambda rev: Mock(date=to_datetime(rev * 1000, utc)),

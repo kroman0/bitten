@@ -553,7 +553,8 @@ class BuildConfigurationsAdminPageProviderTestCase(unittest.TestCase):
         
         self.failUnless(req.chrome['warnings'], "No warnings?")
         self.assertEquals(req.chrome['warnings'],
-                            ['Invalid Repository Path "invalid/path".'])
+                    ['Invalid Repository Path: "invalid/path" does not exist '
+                     'within the "(default)" repository.'])
 
     def test_process_update_config_non_wellformed_recipe(self):
         BuildConfig(self.env, name='foo', label='Foo', path='branches/foo',

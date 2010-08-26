@@ -148,7 +148,10 @@ class BuildNotifyEmail(NotifyEmail):
         return messages
 
     def get_changeset(self):
-        return self.env.get_repository().get_changeset(self.build.rev)
+        repos = self.env.get_repository()
+        assert repos, 'No "(default)" Repository: Add a repository or alias ' \
+                      'named "(default)" to Trac.'
+        return repos.get_changeset(self.build.rev)
 
     def get_author(self):
         return self.get_changeset().author
