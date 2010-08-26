@@ -131,6 +131,8 @@ class BuildQueue(object):
 
         db = self.env.get_db_cnx()
         repos = self.env.get_repository()
+        assert repos, 'No "(default)" Repository: Add a repository or alias ' \
+                      'named "(default)" to Trac.'
 
         self.reset_orphaned_builds()
 
@@ -212,6 +214,8 @@ class BuildQueue(object):
         configuration being in the build queue.
         """
         repos = self.env.get_repository()
+        assert repos, 'No "(default)" Repository: Add a repository or alias ' \
+                      'named "(default)" to Trac.'
 
         db = self.env.get_db_cnx()
         builds = []

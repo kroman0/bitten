@@ -76,6 +76,20 @@ def _get_build_data(env, req, build):
     }
     return data
 
+def _has_permission(repos, path, perm, raise_error=False):
+    if hasattr(repos, 'authz'):
+        if not repos.authz.has_permission(path):
+            if not raise_error:
+                return False
+            repos.authz.assert_permission(path)
+    else:
+        node = repos.get_node(path)
+        if not node.can_view(perm):
+            if not raise_error:
+                return False
+            from trac.perm import PermissionError
+            raise PermissionError('BROWSER_VIEW', node.resource)
+    return True
 
 class BittenChrome(Component):
     """Provides the Bitten templates and static resources."""
@@ -93,7 +107,9 @@ class BittenChrome(Component):
         if 'BUILD_VIEW' in req.perm:
             status = ''
             if BuildMaster(self.env).quick_status:
-                repos = self.env.get_repository(req.authname)
+                repos = self.env.get_repository(authname=req.authname)
+                assert repos, 'No "(default)" Repository: Add a repository ' \
+                              'or alias named "(default)" to Trac.'
                 for config in BuildConfig.select(self.env,
                                                  include_inactive=False):
                     prev_rev = None
@@ -188,11 +204,13 @@ class BuildConfigController(Component):
             show_all = True
         data['show_all'] = show_all
 
-        repos = self.env.get_repository(req.authname)
+        repos = self.env.get_repository(authname=req.authname)
+        assert repos, 'No "(default)" Repository: Add a repository or alias ' \
+                      'named "(default)" to Trac.'
 
         configs = []
         for config in BuildConfig.select(self.env, include_inactive=show_all):
-            if not repos.authz.has_permission(config.path):
+            if not _has_permission(repos, config.path, req.perm):
                 continue
 
             description = config.description
@@ -275,11 +293,13 @@ class BuildConfigController(Component):
 
         db = self.env.get_db_cnx()
 
-        repos = self.env.get_repository(req.authname)
+        repos = self.env.get_repository(authname=req.authname)
+        assert repos, 'No "(default)" Repository: Add a repository or alias ' \
+                      'named "(default)" to Trac.'
 
         configs = []
         for config in BuildConfig.select(self.env, include_inactive=False):
-            if not repos.authz.has_permission(config.path):
+            if not _has_permission(repos, config.path, req.perm):
                 continue
 
             self.log.debug(config.name)
@@ -342,8 +362,10 @@ class BuildConfigController(Component):
             raise HTTPNotFound("Build configuration '%s' does not exist." \
                                 % config_name)
 
-        repos = self.env.get_repository(req.authname)
-        repos.authz.assert_permission(config.path)
+        repos = self.env.get_repository(authname=req.authname)
+        assert repos, 'No "(default)" Repository: Add a repository or alias ' \
+                      'named "(default)" to Trac.'
+        _has_permission(repos, config.path, req.perm, True)
 
         data = {'title': 'Build Configuration "%s"' \
                           % config.label or config.name,
@@ -412,7 +434,9 @@ class BuildConfigController(Component):
         more = False
         data['page_number'] = page
 
-        repos = self.env.get_repository(req.authname)
+        repos = self.env.get_repository(authname=req.authname)
+        assert repos, 'No "(default)" Repository: Add a repository or alias ' \
+                      'named "(default)" to Trac.'
 
         builds_per_page = 12 * len(platforms)
         idx = 0
@@ -465,7 +489,6 @@ class BuildConfigController(Component):
         """
 
         db = self.env.get_db_cnx()
-        repos = self.env.get_repository()
         cursor = db.cursor()
 
         cursor.execute("""SELECT DISTINCT report.category as category
@@ -563,8 +586,10 @@ class BuildController(Component):
         data['build']['can_delete'] = ('BUILD_DELETE' in req.perm \
                                    and build.status != build.PENDING)
 
-        repos = self.env.get_repository(req.authname)
-        repos.authz.assert_permission(config.path)
+        repos = self.env.get_repository(authname=req.authname)
+        assert repos, 'No "(default)" Repository: Add a repository or alias ' \
+                      'named "(default)" to Trac.'
+        _has_permission(repos, config.path, req.perm, True)
         chgset = repos.get_changeset(build.rev)
         data['build']['chgset_author'] = chgset.author
 
@@ -604,13 +629,15 @@ class BuildController(Component):
                        "AND b.status IN (%s, %s) ORDER BY b.stopped",
                        (start, stop, Build.SUCCESS, Build.FAILURE))
 
-        repos = self.env.get_repository(req.authname)
+        repos = self.env.get_repository(authname=req.authname)
+        assert repos, 'No "(default)" Repository: Add a repository or alias ' \
+                      'named "(default)" to Trac.'
 
         event_kinds = {Build.SUCCESS: 'successbuild',
                        Build.FAILURE: 'failedbuild'}
 
         for id_, config, label, path, rev, platform, stopped, status in cursor:
-            if not repos.authz.has_permission(path):
+            if not _has_permission(repos, path, req.perm):
                 continue
             errors = []
             if status == Build.FAILURE:
@@ -754,7 +781,9 @@ class SourceFileLinkFormatter(Component):
     def get_formatter(self, req, build):
         """Return the log message formatter function."""
         config = BuildConfig.fetch(self.env, name=build.config)
-        repos = self.env.get_repository(req.authname)
+        repos = self.env.get_repository(authname=req.authname)
+        assert repos, 'No "(default)" Repository: Add a repository or alias ' \
+                      'named "(default)" to Trac.'
         href = req.href.browser
         cache = {}
 

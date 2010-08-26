@@ -156,7 +156,11 @@ class BuildMaster(Component):
         queue = BuildQueue(self.env, build_all=self.build_all,
                            stabilize_wait=self.stabilize_wait,
                            timeout=self.slave_timeout)
-        queue.populate()
+        try:
+            queue.populate()
+        except AssertionError, e:
+            self.log.error(e.message, exc_info=True)
+            self._send_error(req, HTTP_BAD_REQUEST, e.message)
 
         try:
             elem = xmlio.parse(req.read())

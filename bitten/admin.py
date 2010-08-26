@@ -273,19 +273,27 @@ class BuildConfigurationsAdminPageProvider(Component):
             warnings.append('The field "name" may only contain letters, '
                             'digits, periods, or dashes.')
 
+        repos = self.env.get_repository(authname=req.authname)
+        if not repos:
+            warnings.append('No "(default)" Repository: Add a repository or '
+                            'alias named "(default)" to Trac.')
         path = req.args.get('path', '')
-        repos = self.env.get_repository(req.authname)
+        min_rev = req.args.get('min_rev') or None
         max_rev = req.args.get('max_rev') or None
-        try:
-            node = repos.get_node(path, max_rev)
-            assert node.isdir, '%s is not a directory' % node.path
-        except (AssertionError, TracError), e:
-            warnings.append('Invalid Repository Path "%s".' % path)
-        if req.args.get('min_rev'):
+
+        if repos:
+            path = repos.normalize_path(path)
             try:
-                repos.get_node(path, req.args.get('min_rev'))
-            except TracError, e:
-                warnings.append('Invalid Oldest Revision: %s.' % unicode(e))
+                node = repos.get_node(path, max_rev)
+                assert node.isdir, '%s is not a directory' % node.path
+            except (AssertionError, TracError), e:
+                warnings.append('Invalid Repository Path: "%s" does not exist '
+                                'within the "(default)" repository.' % path)
+            if min_rev:
+                try:
+                    repos.get_node(path, min_rev)
+                except TracError, e:
+                    warnings.append('Invalid Oldest Revision: %s.' % unicode(e))
 
         recipe_xml = req.args.get('recipe', '')
         if recipe_xml:
@@ -297,10 +305,10 @@ class BuildConfigurationsAdminPageProvider(Component):
                 warnings.append('Invalid Recipe: %s.' % unicode(e))
 
         config.name = name
-        config.path = repos.normalize_path(path)
+        config.path = path
         config.recipe = recipe_xml
-        config.min_rev = req.args.get('min_rev')
-        config.max_rev = req.args.get('max_rev')
+        config.min_rev = min_rev
+        config.max_rev = max_rev
         config.label = req.args.get('label', config.name)
         config.description = req.args.get('description', '')
 
