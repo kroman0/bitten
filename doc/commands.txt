@@ -1129,7 +1129,9 @@ Pull changesets and updates a local Mercurial repository.
 
 As the command depends on a pre-existing repository, bitten-slave must be
 started with ``--build-dir=`` option for locating and working with the
-repository.
+repository. Also, seeing no remote location can be specified the repository
+``.hg/hgrc`` configuration file needs a ``[paths] default = ....`` location
+defined.
 
 Parameters
 ----------
