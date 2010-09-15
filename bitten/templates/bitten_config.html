@@ -176,7 +176,7 @@
           <th py:for="platform in config.platforms">$platform.name</th>
         </tr></thead>
         <tbody py:if="config.builds">
-          <tr py:for="rev_num in sorted(config.builds, reverse=True)"
+          <tr py:for="rev_num in config.revisions"
               py:with="rev = config.builds[rev_num]">
             <th class="chgset" scope="row">
               <a href="$rev.href" title="View Changeset">[$rev_num]</a>

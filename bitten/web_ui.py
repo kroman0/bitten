@@ -441,11 +441,14 @@ class BuildConfigController(Component):
         builds_per_page = 12 * len(platforms)
         idx = 0
         builds = {}
+        revisions = []
         for platform, rev, build in collect_changes(repos, config):
             if idx >= page * builds_per_page:
                 more = True
                 break
             elif idx >= (page - 1) * builds_per_page:
+                if rev not in builds:
+                    revisions.append(rev)
                 builds.setdefault(rev, {})
                 builds[rev].setdefault('href', req.href.changeset(rev))
                 if build and build.status != Build.PENDING:
@@ -467,6 +470,7 @@ class BuildConfigController(Component):
                     builds[rev][platform.id] = build_data
             idx += 1
         data['config']['builds'] = builds
+        data['config']['revisions'] = revisions
 
         if page > 1:
             if page == 2:

@@ -104,6 +104,37 @@ class BuildConfigControllerTestCase(AbstractWebUITestCase):
         self.assertEquals('/trac/attachment/build/test/',
                                 data['config']['attachments']['attach_href'])
 
+    def test_bitten_keeps_order_of_revisions_from_versioncontrol(self):
+        # Trac's API specifies that they are sorted chronological (backwards)
+        # We must not assume that these revision numbers can be sorted later on,
+        # for example the mercurial plugin will return the revisions as strings
+        # (e.g. '880:4c19fa95fb9e')
+        config = BuildConfig(self.env, name='test', path='trunk')
+        config.insert()
+        platform = TargetPlatform(self.env, config='test', name='any')
+        platform.insert()
+
+        PermissionSystem(self.env).grant_permission('joe', 'BUILD_VIEW')
+        req = Mock(method='GET', base_path='', cgi_location='',
+                   path_info='/build/'+config.name, href=Href('/trac'), args={},
+                   chrome={}, authname='joe',
+                   perm=PermissionCache(self.env, 'joe'))
+
+        # revisions are intentionally not sorted in any way - bitten should just keep them!
+        revision_ids = [5, 8, 2]
+        revision_list = [('trunk', revision, 'edit') for revision in revision_ids]
+        root = Mock(get_entries=lambda: ['foo'], get_history=lambda: revision_list)
+        self.repos = Mock(get_node=lambda path, rev=None: root,
+                          sync=lambda: None, normalize_path=lambda path: path)
+        self.repos.authz = Mock(has_permission=lambda path: True, assert_permission=lambda path: None)
+
+        module = BuildConfigController(self.env)
+        assert module.match_request(req)
+        _, data, _ = module.process_request(req)
+
+        actual_revision_ids = data['config']['revisions']
+        self.assertEquals(revision_ids, actual_revision_ids)
+
     def test_view_config_paging(self):
         config = BuildConfig(self.env, name='test', path='trunk')
         config.insert()
