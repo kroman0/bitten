@@ -20,6 +20,7 @@ import pkg_resources
 from genshi.builder import tag
 from trac.attachment import AttachmentModule, Attachment
 from trac.core import *
+from trac.config import Option
 from trac.mimeview.api import Context
 from trac.resource import Resource
 from trac.timeline import ITimelineEventProvider
@@ -149,6 +150,11 @@ class BuildConfigController(Component):
     """Implements the web interface for build configurations."""
 
     implements(IRequestHandler, IRequestFilter, INavigationContributor)
+
+    # Configuration options
+
+    chart_style = Option('bitten', 'chart_style', 'height: 220px; width: 220px;', doc=
+        """Style attribute for charts. Mostly useful for setting the height and width.""")
 
     # INavigationContributor methods
 
@@ -427,6 +433,7 @@ class BuildConfigController(Component):
                         chart_generators.append({
                             'href': req.href.build(config.name, 'chart/' + category),
                             'category': category,
+                            'style': self.config.get('bitten', 'chart_style'),
                         })
             data['config']['charts'] = chart_generators
 
