@@ -107,7 +107,7 @@
     </py:when><py:when test="'view_config'">
       <div id="charts"><py:for each="chart in config.charts">
         <h3 id="chart_${chart.category}_title" style="text-align: center;"/>
-        <div id="chart_${chart.category}" style="width:220px;height:220px;"></div>
+        <div id="chart_${chart.category}" style="${chart.style}"></div>
         <script type="text/javascript">
           $(document).ready(function() { 
                
