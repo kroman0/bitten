@@ -189,7 +189,7 @@ class TestCoverageAnnotator(Component):
                         and data.get('context').resource or None
         if resource and isinstance(resource, Resource) \
                     and resource.realm=='source' and data.get('file') \
-                    and not req.args.get('annotate'):
+                    and not req.args.get('annotate', '') == 'coverage':
             add_ctxtnav(req, 'Coverage',
                     title='Annotate file with test coverage '
                           'data (if available)',
