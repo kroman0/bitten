@@ -210,8 +210,8 @@ class TestCoverageAnnotator(Component):
         # attempt to use the version passed in with the request,
         # otherwise fall back to the latest version of this file.
         try:
-            version = int(context.req.args['rev'])
-        except (KeyError, TypeError):
+            version = context.req.args['rev']
+        except KeyError:
             version = resource.version
 
         builds = Build.select(self.env, rev=version)
