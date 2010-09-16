@@ -46,6 +46,7 @@ Parameters
 
 Both parameters must be specified.
 
+See also `Report Formats <reports.html>`_.
 
 ------------
 ``<attach>``
