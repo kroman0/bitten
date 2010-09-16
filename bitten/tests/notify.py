@@ -83,6 +83,12 @@ class BuildNotifyEmailTest(BittenNotifyBaseTest):
         self.assertTrue('author' in self.notifications_sent_to,
                 'Recipient list should contain the author')
 
+    def test_notification_body_render(self):
+        self.email.notify(self.build)
+        output = self.email.template.generate(**self.email.data).render('text')
+        self.assertTrue('Successful build of My Project [123]' in output)
+        self.assertTrue('<http://example.org/trac.cgi/changeset/123>' in output)
+
     # TODO functional tests of generated mails
 
 

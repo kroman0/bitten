@@ -6,8 +6,9 @@
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.
 
+from genshi.template.text import NewTextTemplate
 from trac.core import Component, implements
-from trac.web.chrome import ITemplateProvider
+from trac.web.chrome import ITemplateProvider, Chrome
 from trac.config import BoolOption
 from trac.notification import NotifyEmail
 from bitten.api import IBuildListener
@@ -90,6 +91,10 @@ class BuildNotifyEmail(NotifyEmail):
 
     def __init__(self, env):
         NotifyEmail.__init__(self, env)
+        # Override the template type to always use NewTextTemplate
+        if not isinstance(self.template, NewTextTemplate):
+            self.template = Chrome(env).templates.load(
+                                self.template.filepath, cls=NewTextTemplate)
 
     def notify(self, build):
         self.build = build
