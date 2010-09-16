@@ -1,0 +1,135 @@
+.. -*- mode: rst; encoding: utf-8 -*-
+
+==============
+Report Formats
+==============
+
+The base element of the report must be "report" and have an attribute
+"category" that is one of "test", "coverage" or "lint":
+
+.. code-block:: xml
+
+    <report category="test|coverage|lint">
+    </report>
+
+Inside the report there must be elements for each report type.  The way the
+data is captured is pretty flexible because it can either be in attributes
+or in child elements.
+
+Test Reports
+============
+
+Test reports must have sub-elements of report of type ``<test />``.  These
+elements can have any of these attributes (or subelements with contained
+cdata):
+
++-----------------+----------------------------------------------------------+
+| Attribute       | Description                                              |
++=================+==========================================================+
+| ``duration``    | Duration of test (float)                                 |
++-----------------+----------------------------------------------------------+
+| ``status``      | "success", "failure", "error", or "ignore" (string)      |
++-----------------+----------------------------------------------------------+
+| ``name``        | Name of the test (string)                                |
++-----------------+----------------------------------------------------------+
+| ``fixture``     | Name of the test fixture (string)                        |
++-----------------+----------------------------------------------------------+
+| ``file``        | Path to test file relative to the base path for the      |
+|                 | build configuration (string)                             |
++-----------------+----------------------------------------------------------+
+| ``stdout``      | The output from the test (string)                        |
++-----------------+----------------------------------------------------------+
+| ``traceback``   | The traceback from any error or failure (string)         |
++-----------------+----------------------------------------------------------+
+
+Example:
+
+.. code-block:: xml
+
+    <report category="test">
+       <test duration="0.073" 
+             status="success"
+             fixture="bitten.tests.model.BuildConfigTestCase"
+             name="test_config_update_name" 
+             file="bitten/tests/model.py"
+             stdout="Renaming build configuration"
+             traceback="None">
+       </test>
+       <test>
+         <duration>0.073</duration>
+         <status>success</status>
+         <fixture>bitten.tests.model.BuildConfigTestCase</fixture>
+         <name>test_config_update_name</name>
+         <file>bitten/tests/model.py</file>
+         <stdout>Renaming build configuration</stdout>
+       </test>
+    </report>
+
+Coverage Reports
+================
+
+Coverage reports must be inside ``<coverage />`` elements.  The
+allowable attributes are:
+
++-----------------+----------------------------------------------------------+
+| Attribute       | Description                                              |
++=================+==========================================================+
+| ``name``        | The name of the module being tested for coverage         |
++-----------------+----------------------------------------------------------+
+| ``file``        | The name of the file relative to the base path in the    |
+|                 | build configuration                                      |
++-----------------+----------------------------------------------------------+
+| ``percentage``  | The percentage of lines in that file covered             |
++-----------------+----------------------------------------------------------+
+| ``lines``       | The number of lines covered                              |
++-----------------+----------------------------------------------------------+
+| ``line_hits``   | Line-by-line coverage of the file, where code lines have |
+|                 | 0 or more times covered and non-code lines are  marked   |
+|                 | as `'-'` (optional)                                      |
++-----------------+----------------------------------------------------------+
+
+Example:
+
+.. code-block:: xml
+
+    <report category="coverage">
+       <coverage name="my_module"
+                 file="my_module.py"
+                 percentage="75"
+                 lines="4"
+                 line_hits="2 0 - 1 1">
+        </coverage>
+    </report>
+
+Lint Reports
+============
+
+Lint issues are placed inside ``<problem />`` elements, with allowed attributes of:
+
++-----------------+----------------------------------------------------------+
+| Attribute       | Description                                              |
++=================+==========================================================+
+| ``file``        | The name of the file relative to the base path in the    |
+|                 | build configuration                                      |
++-----------------+----------------------------------------------------------+
+| ``tag``         | Class, method or other useful identifiable location      |
+|                 | inside the file                                          |
++-----------------+----------------------------------------------------------+
+| ``line``        | Line number                                              |
++-----------------+----------------------------------------------------------+
+| ``category``    | Category for problem;                                    |
+|                 | ``convention \| warning \| refactor \| error``           |
++-----------------+----------------------------------------------------------+
+
+Example:
+
+.. code-block:: xml
+
+    <report category="lint">
+       <problem category="convention"
+                line="17"
+                tag="TestResultsChartGenerator"
+                file="bitten/report/testing.py">
+            Missing docstring
+        </problem>
+    </report>
