@@ -428,9 +428,8 @@ class BuildMaster(Component):
         body = 'Keepalive processed'
         self._send_response(req, 200, body, {
                             'Content-Type': 'text/plain',
-                            'Content-Length': str(len(body)),
-                            'Location': req.abs_href.builds(
-                                    build.id, 'keepalive')})
+                            'Content-Length': str(len(body))})
+
 
     def _start_new_step(self, build, stepname):
         """Creates the in-memory representation for a newly started
