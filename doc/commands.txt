@@ -106,10 +106,11 @@ Parameters
 +----------------+-----------------------------------------------------------+
 | ``args``       | Any arguments to pass to the executable or script         |
 +----------------+-----------------------------------------------------------+
-| `timeout`      | Limits the runtime of this command to the specified       |
+| ``dir``        | Directory to change to before executing the command       |
++----------------+-----------------------------------------------------------+
+| ``timeout``    | Limits the runtime of this command to the specified       |
 |                | number of seconds, after which it will be terminated.     |
 +----------------+-----------------------------------------------------------+
-
 
 Either ``executable`` or ``file`` must be specified.
 
@@ -141,6 +142,8 @@ Parameters
 | ``output``     | Path to the output file                                   |
 +----------------+-----------------------------------------------------------+
 | ``args``       | Any arguments to pass to the executable or script         |
++----------------+-----------------------------------------------------------+
+| ``dir``        | Directory to change to before executing the command       |
 +----------------+-----------------------------------------------------------+
 
 Either ``executable`` or ``file`` must be specified.

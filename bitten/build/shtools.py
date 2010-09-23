@@ -34,6 +34,7 @@ def exec_(ctxt, executable=None, file_=None, output=None, args=None,
     :param output: name of the file to which the output of the script should be
                    written
     :param args: command-line arguments to pass to the script
+    :param dir\_: directory to change to before executing the command
     :param timeout: the number of seconds before the external process should
                     be aborted (has same constraints as CommandLine)
     """
@@ -61,6 +62,7 @@ def pipe(ctxt, executable=None, file_=None, input_=None, output=None,
     :param output: name of the file to which the output of the script should be
                    written
     :param args: command-line arguments to pass to the script
+    :param dir\_: directory to change to before executing the command
     """
     assert executable or file_, \
         'Either "executable" or "file" attribute required'
@@ -89,6 +91,7 @@ def execute(ctxt, executable=None, file_=None, input_=None, output=None,
     :param output: name of the file to which the output of the script should be
                    written
     :param args: command-line arguments to pass to the script
+    :param dir\_: directory to change to before executing the command
     :param filter\_: function to filter out messages from the executable stdout
     :param timeout: the number of seconds before the external process should
                     be aborted (has same constraints as CommandLine)
