@@ -128,7 +128,6 @@ class BuildQueueTestCase(unittest.TestCase):
     def setUp(self):
         self.env = EnvironmentStub()
         self.env.path = tempfile.mkdtemp()
-        os.mkdir(os.path.join(self.env.path, 'snapshots'))
 
         db = self.env.get_db_cnx()
         cursor = db.cursor()
