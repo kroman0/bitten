@@ -46,10 +46,6 @@ class BuildSetup(Component):
         cursor.execute("INSERT INTO system (name,value) "
                        "VALUES ('bitten_version',%s)", (schema_version,))
 
-        # Create the directory for storing snapshot archives
-        snapshots_dir = os.path.join(self.env.path, 'snapshots')
-        os.mkdir(snapshots_dir)
-
         db.commit()
 
     def environment_needs_upgrade(self, db):
