@@ -1,6 +1,6 @@
 # -*- coding: UTF-8 -*-
 #
-# Copyright (C) 2007 Edgewall Software
+# Copyright (C) 2007-2010 Edgewall Software
 # Copyright (C) 2007 Wei Zhuo <weizhuo@gmail.com>
 # All rights reserved.
 #

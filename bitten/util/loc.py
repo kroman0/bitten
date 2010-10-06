@@ -2,7 +2,7 @@
 #
 # Copyright (C) 1998 Dinu C. Gherman <gherman@europemail.com>
 # Copyright (C) 2005-2007 Christopher Lenz <cmlenz@gmx.de>
-# Copyright (C) 2007 Edgewall Software
+# Copyright (C) 2007-2010 Edgewall Software
 # 
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution. The terms
