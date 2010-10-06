@@ -2,7 +2,7 @@
 #
 # Copyright (C) 2005-2007 Christopher Lenz <cmlenz@gmx.de>
 # Copyright (C) 2006 Matthew Good <matt@matt-good.net>
-# Copyright (C) 2007 Edgewall Software
+# Copyright (C) 2007-2010 Edgewall Software
 # Copyright (C) 2009 Grzegorz Sobanski <silk@boktor.net>
 # All rights reserved.
 #
