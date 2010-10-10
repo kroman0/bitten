@@ -19,4 +19,4 @@ except:
         pass
 
 # The master-slave protocol/configuration version
-PROTOCOL_VERSION = 4
+PROTOCOL_VERSION = 5

@@ -14,8 +14,10 @@ import shutil
 from StringIO import StringIO
 import tempfile
 import unittest
+import cgi
 from Cookie import SimpleCookie as Cookie
 
+from trac.attachment import Attachment
 from trac.db import DatabaseManager
 from trac.perm import PermissionCache, PermissionSystem
 from trac.test import EnvironmentStub, Mock
@@ -24,6 +26,7 @@ from trac.web.api import RequestDone
 from trac.web.href import Href
 
 from bitten.master import BuildMaster
+from bitten.slave import encode_multipart_formdata
 from bitten.model import BuildConfig, TargetPlatform, Build, BuildStep, \
                          BuildLog, Report, schema
 from bitten import PROTOCOL_VERSION
@@ -280,6 +283,7 @@ class BuildMasterTestCase(unittest.TestCase):
                    send_response=lambda x: outheaders.setdefault('Status', x),
                    send_header=lambda x, y: outheaders.setdefault(x, y),
                    write=outbody.write,
+                   form_token="12345",
                    incookie=Cookie('trac_auth='))
 
         module = BuildMaster(self.env)
@@ -288,13 +292,13 @@ class BuildMasterTestCase(unittest.TestCase):
         self.assertRaises(RequestDone, module.process_request, req)
 
         self.assertEqual(200, outheaders['Status'])
-        self.assertEqual('112', outheaders['Content-Length'])
+        self.assertEqual('131', outheaders['Content-Length'])
         self.assertEqual('application/x-bitten+xml',
                          outheaders['Content-Type'])
         self.assertEqual('attachment; filename=recipe_test_r123.xml',
                          outheaders['Content-Disposition'])
-        self.assertEqual('<build build="1" config="test" name="hal"'
-                         ' path="somepath" platform="Unix"'
+        self.assertEqual('<build build="1" config="test" form_token="12345" '
+                         'name="hal" path="somepath" platform="Unix"'
                          ' revision="123"><step id="s1"/></build>',
                          outbody.getvalue())
 
@@ -530,87 +534,6 @@ class BuildMasterTestCase(unittest.TestCase):
             'stdout': 'Doing my thing',
             'type': 'test',
         }, reports[0].items[0])
-
-    def test_process_build_step_success_with_attach(self):
-        # Parse input and create attachments for config + build
-        recipe = """<build>
-  <step id="foo">
-  <attach file="bar.txt" description="bar bar"/>
-  <attach file="baz.txt" description="baz baz" resource="config"/>
-  </step>
-</build>"""
-        BuildConfig(self.env, 'test', path='somepath', active=True,
-                    recipe=recipe).insert()
-        build = Build(self.env, 'test', '123', 1, slave='hal', rev_time=42,
-                      started=42, status=Build.IN_PROGRESS)
-        build.slave_info[Build.TOKEN] = '123';
-        build.insert()
-
-        inbody = StringIO("""<result step="foo" status="success"
-                                     time="2007-04-01T15:30:00.0000"
-                                     duration="3.45">
-    <attach>
-        <file filename="bar.txt"
-              description="bar bar">aGVsbG8gYmFy\n</file>
-    </attach>
-    <attach>
-        <file filename="baz.txt" description="baz baz"
-            resource="config">aGVsbG8gYmF6\n</file>
-    </attach>
-</result>""")
-        outheaders = {}
-        outbody = StringIO()
-        req = Mock(method='POST', base_path='',
-                   path_info='/builds/%d/steps/' % build.id,
-                   href=Href('/trac'), abs_href=Href('http://example.org/trac'),
-                   remote_addr='127.0.0.1', args={},
-                   authname='hal',
-                   perm=PermissionCache(self.env, 'hal'),
-                   read=inbody.read,
-                   send_response=lambda x: outheaders.setdefault('Status', x),
-                   send_header=lambda x, y: outheaders.setdefault(x, y),
-                   write=outbody.write,
-                   incookie=Cookie('trac_auth=123'))
-        module = BuildMaster(self.env)
-
-        module._start_new_step(build, 'foo').insert()
-
-        assert module.match_request(req)
-
-        self.assertRaises(RequestDone, module.process_request, req)
-
-        self.assertEqual(201, outheaders['Status'])
-        self.assertEqual('20', outheaders['Content-Length'])
-        self.assertEqual('text/plain', outheaders['Content-Type'])
-        self.assertEqual('Build step processed', outbody.getvalue())
-
-        build = Build.fetch(self.env, build.id)
-        self.assertEqual(Build.SUCCESS, build.status)
-        assert build.stopped
-        assert build.stopped > build.started
-
-        steps = list(BuildStep.select(self.env, build.id))
-        self.assertEqual(1, len(steps))
-        self.assertEqual('foo', steps[0].name)
-        self.assertEqual(BuildStep.SUCCESS, steps[0].status)
-
-        from trac.attachment import Attachment
-        config_attachments = list(Attachment.select(self.env, 'build', 'test'))
-        build_attachments = list(Attachment.select(self.env, 'build', 'test/1'))
-
-        self.assertEquals(1, len(build_attachments))
-        self.assertEquals('hal', build_attachments[0].author)
-        self.assertEquals('bar bar', build_attachments[0].description)
-        self.assertEquals('bar.txt', build_attachments[0].filename)
-        self.assertEquals('hello bar',
-                        build_attachments[0].open().read())
-
-        self.assertEquals(1, len(config_attachments))
-        self.assertEquals('hal', config_attachments[0].author)
-        self.assertEquals('baz baz', config_attachments[0].description)
-        self.assertEquals('baz.txt', config_attachments[0].filename)
-        self.assertEquals('hello baz',
-                        config_attachments[0].open().read())
 
     def test_process_build_step_wrong_slave(self):
         recipe = """<build>
@@ -977,6 +900,129 @@ class BuildMasterTestCase(unittest.TestCase):
 
         self.assertEqual(405, outheaders['Status'])
         self.assertEqual('Method GET not allowed', outbody.getvalue())
+
+    def test_process_attach_collection_default_member(self):
+        req = Mock(args={}, path_info='/builds/12/attach/config')
+        module = BuildMaster(self.env)
+        self.assertEquals(True, module.match_request(req))
+        self.assertTrue(req.args['collection'], 'attach')
+        self.assertTrue(req.args['member'], '')
+
+    def test_process_attach_collection_config(self):
+        req = Mock(args={}, path_info='/builds/12/attach/config')
+        module = BuildMaster(self.env)
+        self.assertEquals(True, module.match_request(req))
+        self.assertTrue(req.args['collection'], 'attach')
+        self.assertTrue(req.args['member'], 'config')
+
+    def test_process_attach_collection_config(self):
+        req = Mock(args={}, path_info='/builds/12/attach/build')
+        module = BuildMaster(self.env)
+        self.assertEquals(True, module.match_request(req))
+        self.assertTrue(req.args['collection'], 'attach')
+        self.assertTrue(req.args['member'], 'build')
+
+    def test_process_attach_config(self):
+        body, content_type = encode_multipart_formdata({
+                'description': 'baz baz',
+                'file': ('baz.txt', 'hello baz'),
+                '__FORM_TOKEN': '123456'})
+        args = {}
+        for k, v in dict(cgi.FieldStorage(fp=StringIO(body), environ={
+                    'REQUEST_METHOD': 'POST',
+                    'CONTENT_TYPE': content_type})
+                    ).items():
+            if v.filename:
+                args[k] = v
+            else:
+                args[k] = v.value
+        args.update({'collection': 'attach', 'member': 'config'})
+        self.assertTrue('file' in args)
+
+        outheaders = {}
+        outbody = StringIO()
+
+        req = Mock(args=args, form_token='123456', authname='hal',
+                remote_addr='127.0.0.1',
+                send_response=lambda x: outheaders.setdefault('Status', x),
+                send_header=lambda x, y: outheaders.setdefault(x, y),
+                write=outbody.write)
+
+        config = BuildConfig(self.env, 'test', path='somepath', active=True,
+                    recipe='')
+        config.insert()
+        build = Build(self.env, 'test', '123', 1, slave='hal', rev_time=42,
+                      started=42, status=Build.IN_PROGRESS)
+        build.insert()
+
+        module = BuildMaster(self.env)
+
+        self.assertRaises(RequestDone, module._process_attachment,
+                                                req, config, build)
+        self.assertEqual(201, outheaders['Status'])
+        self.assertEqual('18', outheaders['Content-Length'])
+        self.assertEqual('text/plain', outheaders['Content-Type'])
+        self.assertEqual('Attachment created', outbody.getvalue())
+
+        config_atts = list(Attachment.select(self.env, 'build', 'test'))
+        self.assertEquals(1, len(config_atts))
+        self.assertEquals('hal', config_atts[0].author)
+        self.assertEquals('baz baz', config_atts[0].description)
+        self.assertEquals('baz.txt', config_atts[0].filename)
+        self.assertEquals('hello baz',
+                        config_atts[0].open().read())
+
+
+    def test_process_attach_build(self):
+        body, content_type = encode_multipart_formdata({
+                'description': 'baz baz',
+                'file': ('baz.txt', 'hello baz'),
+                '__FORM_TOKEN': '123456'})
+        args = {}
+        for k, v in dict(cgi.FieldStorage(fp=StringIO(body), environ={
+                    'REQUEST_METHOD': 'POST',
+                    'CONTENT_TYPE': content_type})
+                    ).items():
+            if v.filename:
+                args[k] = v
+            else:
+                args[k] = v.value
+        args.update({'collection': 'attach', 'member': 'build'})
+        self.assertTrue('file' in args)
+
+        outheaders = {}
+        outbody = StringIO()
+
+        req = Mock(args=args, form_token='123456', authname='hal',
+                remote_addr='127.0.0.1',
+                send_response=lambda x: outheaders.setdefault('Status', x),
+                send_header=lambda x, y: outheaders.setdefault(x, y),
+                write=outbody.write)
+
+        config = BuildConfig(self.env, 'test', path='somepath', active=True,
+                    recipe='')
+        config.insert()
+        build = Build(self.env, 'test', '123', 1, slave='hal', rev_time=42,
+                      started=42, status=Build.IN_PROGRESS)
+        build.insert()
+
+        module = BuildMaster(self.env)
+
+        self.assertRaises(RequestDone, module._process_attachment,
+                                                req, config, build)
+        self.assertEqual(201, outheaders['Status'])
+        self.assertEqual('18', outheaders['Content-Length'])
+        self.assertEqual('text/plain', outheaders['Content-Type'])
+        self.assertEqual('Attachment created', outbody.getvalue())
+
+        build_atts = list(Attachment.select(self.env, 'build', 'test/1'))
+        self.assertEquals(1, len(build_atts))
+        self.assertEquals('hal', build_atts[0].author)
+        self.assertEquals('baz baz', build_atts[0].description)
+        self.assertEquals('baz.txt', build_atts[0].filename)
+        self.assertEquals('hello baz',
+                        build_atts[0].open().read())
+
 
 
 def suite():
