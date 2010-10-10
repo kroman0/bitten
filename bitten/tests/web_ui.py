@@ -48,6 +48,7 @@ class AbstractWebUITestCase(unittest.TestCase):
             get_node=lambda path, rev=None: Mock(get_history=lambda: [],
                                                  isdir=True),
             normalize_path=lambda path: path,
+            normalize_rev=lambda rev: rev,
             sync=lambda: None,
         )
         self.repos.authz = Mock(has_permission=lambda path: True, assert_permission=lambda path: None)
@@ -87,7 +88,8 @@ class BuildConfigControllerTestCase(AbstractWebUITestCase):
                     get_history=lambda: [('trunk', rev, 'edit') for rev in
                                           range(123, 111, -1)])
         self.repos = Mock(get_node=lambda path, rev=None: root,
-                          sync=lambda: None, normalize_path=lambda path: path)
+                          sync=lambda: None, normalize_path=lambda path: path,
+                          normalize_rev=lambda rev: rev)
         self.repos.authz = Mock(has_permission=lambda path: True, assert_permission=lambda path: None)
 
         module = BuildConfigController(self.env)
@@ -125,7 +127,8 @@ class BuildConfigControllerTestCase(AbstractWebUITestCase):
         revision_list = [('trunk', revision, 'edit') for revision in revision_ids]
         root = Mock(get_entries=lambda: ['foo'], get_history=lambda: revision_list)
         self.repos = Mock(get_node=lambda path, rev=None: root,
-                          sync=lambda: None, normalize_path=lambda path: path)
+                          sync=lambda: None, normalize_path=lambda path: path,
+                          normalize_rev=lambda rev: rev)
         self.repos.authz = Mock(has_permission=lambda path: True, assert_permission=lambda path: None)
 
         module = BuildConfigController(self.env)
@@ -151,7 +154,8 @@ class BuildConfigControllerTestCase(AbstractWebUITestCase):
                     get_history=lambda: [('trunk', rev, 'edit') for rev in
                                           range(123, 110, -1)])
         self.repos = Mock(get_node=lambda path, rev=None: root,
-                          sync=lambda: None, normalize_path=lambda path: path)
+                          sync=lambda: None, normalize_path=lambda path: path,
+                          normalize_rev=lambda rev: rev)
         self.repos.authz = Mock(has_permission=lambda path: True, assert_permission=lambda path: None)
 
         module = BuildConfigController(self.env)
@@ -203,6 +207,7 @@ class BuildControllerTestCase(AbstractWebUITestCase):
         self.repos = Mock(get_node=lambda path, rev=None: root,
                           sync=lambda: None,
                           normalize_path=lambda path: path,
+                          normalize_rev=lambda rev: rev,
                           get_changeset=lambda rev: Mock(author='joe'))
         self.repos.authz = Mock(has_permission=lambda path: True, assert_permission=lambda path: None)
 

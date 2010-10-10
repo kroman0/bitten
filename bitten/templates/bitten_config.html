@@ -87,7 +87,7 @@
       <h3 class="builds"><a href="$config.href">Latest builds</a></h3>
       <table class="builds"><tbody><tr>
         <th py:with="youngest_rev = config.youngest_rev">
-          <a href="$youngest_rev.href">[$youngest_rev.id]</a>
+          <a href="$youngest_rev.href">[$youngest_rev.display_rev]</a>
           by ${format_author(youngest_rev.author)}<p class="date">$youngest_rev.date</p>
           <p class="message">$youngest_rev.message</p>
         </th>
@@ -179,7 +179,7 @@
           <tr py:for="rev_num in config.revisions"
               py:with="rev = config.builds[rev_num]">
             <th class="chgset" scope="row">
-              <a href="$rev.href" title="View Changeset">[$rev_num]</a>
+              <a href="$rev.href" title="View Changeset">[$rev.display_rev]</a>
             </th><py:for each="platform in config.platforms"><py:choose>
             <td py:when="platform.id in rev" py:with="build = rev[platform.id]"
                 class="$build.cls">
