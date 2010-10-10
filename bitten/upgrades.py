@@ -17,7 +17,7 @@ import os
 import sys
 
 from trac.core import TracError
-from trac.db import DatabaseManager
+from trac.db import DatabaseManager, Table, Column, Index
 from trac.util.text import to_unicode
 import codecs
 
@@ -58,7 +58,6 @@ def drop_index(env, db, tbl, idx):
 
 def add_log_table(env, db):
     """Add a table for storing the builds logs."""
-    from trac.db import Table, Column
     INFO_LEVEL = 'I'
 
     cursor = db.cursor()
@@ -111,25 +110,28 @@ def add_log_table(env, db):
 def add_recipe_to_config(env, db):
     """Add a column for storing the build recipe to the build configuration
     table."""
-    from bitten.model import BuildConfig
     cursor = db.cursor()
 
-    cursor.execute("CREATE TEMPORARY TABLE old_config AS "
+    build_config_schema_v3 = Table('bitten_config', key='name')[
+            Column('name'), Column('path'), Column('active', type='int'),
+            Column('recipe'), Column('min_rev'), Column('max_rev'),
+            Column('label'), Column('description')
+        ]
+
+    cursor.execute("CREATE TEMPORARY TABLE old_config_v2 AS "
                    "SELECT * FROM bitten_config")
     cursor.execute("DROP TABLE bitten_config")
 
     connector, _ = DatabaseManager(env)._get_connector()
-    for table in BuildConfig._schema:
-        for stmt in connector.to_sql(table):
-            cursor.execute(stmt)
+    for stmt in connector.to_sql(build_config_schema_v3):
+        cursor.execute(stmt)
 
     cursor.execute("INSERT INTO bitten_config (name,path,active,recipe,min_rev,"
                    "max_rev,label,description) SELECT name,path,0,'',NULL,"
-                   "NULL,label,description FROM old_config")
+                   "NULL,label,description FROM old_config_v2")
 
 def add_last_activity_to_build(env, db):
     """Add a column for storing the last activity to the build table."""
-    from trac.db import Table, Column, Index
     cursor = db.cursor()
 
     build_table_schema_v12 = Table('bitten_build', key='id')[
@@ -158,8 +160,6 @@ def add_last_activity_to_build(env, db):
 def add_config_to_reports(env, db):
     """Add the name of the build configuration as metadata to report documents
     stored in the BDB XML database."""
-
-    from bitten.model import Build
     try:
         from bsddb3 import db as bdb
         import dbxml
@@ -188,9 +188,13 @@ def add_config_to_reports(env, db):
         metaval = dbxml.XmlValue()
         if doc.getMetaData('', 'build', metaval):
             build_id = int(metaval.asNumber())
-            build = Build.fetch(env, id=build_id, db=db)
-            if build:
-                doc.setMetaData('', 'config', dbxml.XmlValue(build.config))
+
+            cursor = db.cursor()
+            cursor.execute("SELECT config FROM bitten_build WHERE id=%s", (build_id,))
+            row = cursor.fetchone()
+
+            if row:
+                doc.setMetaData('', 'config', dbxml.XmlValue(row[0]))
                 container.updateDocument(xtn, doc, uc)
             else:
                 # an orphaned report, for whatever reason... just remove it
@@ -203,15 +207,20 @@ def add_config_to_reports(env, db):
 def add_order_to_log(env, db):
     """Add order column to log table to make sure that build logs are displayed
     in the order they were generated."""
-    from bitten.model import BuildLog
     cursor = db.cursor()
+
+    log_table_schema_v6 = Table('bitten_log', key='id')[
+            Column('id', auto_increment=True), Column('build', type='int'),
+            Column('step'), Column('generator'), Column('orderno', type='int'),
+            Index(['build', 'step'])
+        ]
 
     cursor.execute("CREATE TEMPORARY TABLE old_log_v5 AS "
                    "SELECT * FROM bitten_log")
     cursor.execute("DROP TABLE bitten_log")
 
     connector, _ = DatabaseManager(env)._get_connector()
-    for stmt in connector.to_sql(BuildLog._schema[0]):
+    for stmt in connector.to_sql(log_table_schema_v6):
         cursor.execute(stmt)
 
     cursor.execute("INSERT INTO bitten_log (id,build,step,generator,orderno) "
@@ -219,11 +228,20 @@ def add_order_to_log(env, db):
 
 def add_report_tables(env, db):
     """Add database tables for report storage."""
-    from bitten.model import Report
     cursor = db.cursor()
 
+    report_schema_v6 = Table('bitten_report', key='id')[
+            Column('id', auto_increment=True), Column('build', type='int'),
+            Column('step'), Column('category'), Column('generator'),
+            Index(['build', 'step', 'category'])
+        ]
+    report_item_schema_v6 = Table('bitten_report_item', key=('report', 'item', 'name'))[
+            Column('report', type='int'), Column('item', type='int'),
+            Column('name'), Column('value')
+        ]
+
     connector, _ = DatabaseManager(env)._get_connector()
-    for table in Report._schema:
+    for table in [report_schema_v6, report_item_schema_v6]:
         for stmt in connector.to_sql(table):
             cursor.execute(stmt)
 
@@ -234,7 +252,6 @@ def xmldb_to_db(env, db):
     After the upgrade is done, the bitten.dbxml file (and any BDB XML log files)
     may be deleted. BDB XML is no longer used by Bitten.
     """
-    from bitten.model import Report
     from bitten.util import xmlio
     try:
         from bsddb3 import db as bdb
@@ -302,14 +319,29 @@ def xmldb_to_db(env, db):
         category, get_items = report_types[report_type]
         sys.stderr.write('.')
         sys.stderr.flush()
-        report = Report(env, build, step, category=category,
-                        generator=report_type)
-        report.items = list(get_items(xml))
-        try:
-            report.insert(db=db)
-        except AssertionError:
+
+        items = list(get_items(xml))
+
+        cursor = db.cursor()
+        cursor.execute("SELECT bitten_report.id FROM bitten_report "
+                       "WHERE build=%s AND step=%s AND category=%s",
+                       (build, step, category))
+        rows = cursor.fetchall()
+        if rows:
             # Duplicate report, skip
-            pass
+            continue
+
+        cursor.execute("INSERT INTO bitten_report "
+                       "(build,step,category,generator) VALUES (%s,%s,%s,%s)",
+                       (build, step, category, report_type))
+        id = db.get_last_id(cursor, 'bitten_report')
+
+        for idx, item in enumerate(items):
+            cursor.executemany("INSERT INTO bitten_report_item "
+                               "(report,item,name,value) VALUES (%s,%s,%s,%s)",
+                               [(id, idx, key, value) for key, value
+                                in item.items()])
+
     sys.stderr.write('\n')
     sys.stderr.flush()
 
@@ -361,8 +393,6 @@ def fixup_generators(env, db):
 
 def add_error_table(env, db):
     """Add the bitten_error table for recording step failure reasons."""
-    from trac.db import Table, Column
-
     table = Table('bitten_error', key=('build', 'step', 'orderno'))[
                 Column('build', type='int'), Column('step'), Column('message'),
                 Column('orderno', type='int')
@@ -375,15 +405,21 @@ def add_error_table(env, db):
 
 def add_filename_to_logs(env, db):
     """Add filename column to log table to save where log files are stored."""
-    from bitten.model import BuildLog
     cursor = db.cursor()
+
+    build_log_schema_v9 = Table('bitten_log', key='id')[
+            Column('id', auto_increment=True), Column('build', type='int'),
+            Column('step'), Column('generator'), Column('orderno', type='int'),
+            Column('filename'),
+            Index(['build', 'step'])
+        ]
 
     cursor.execute("CREATE TEMPORARY TABLE old_log_v8 AS "
                    "SELECT * FROM bitten_log")
     cursor.execute("DROP TABLE bitten_log")
 
     connector, _ = DatabaseManager(env)._get_connector()
-    for stmt in connector.to_sql(BuildLog._schema[0]):
+    for stmt in connector.to_sql(build_log_schema_v9):
         cursor.execute(stmt)
 
     cursor.execute("INSERT INTO bitten_log (id,build,step,generator,orderno,filename) "
@@ -391,19 +427,11 @@ def add_filename_to_logs(env, db):
 
 def migrate_logs_to_files(env, db):
     """Migrates logs that are stored in the bitten_log_messages table into files."""
-    from trac.db import Table, Column
-    from bitten.model import BuildLog
-    log_table = BuildLog._schema[0]
     logs_dir = env.config.get("bitten", "logs_dir", "log/bitten")
     if not os.path.isabs(logs_dir):
         logs_dir = os.path.join(env.path, logs_dir)
     if not os.path.exists(logs_dir):
         os.makedirs(logs_dir)
-
-    message_table = Table('bitten_log_message', key=('log', 'line'))[
-            Column('log', type='int'), Column('line', type='int'),
-            Column('level', size=1), Column('message')
-        ]
 
     cursor = db.cursor()
     message_cursor = db.cursor()
@@ -514,18 +542,22 @@ def remove_stray_log_levels_files(env, db):
 
 def recreate_rule_with_int_id(env, db):
         """Recreates the bitten_rule table with an integer id column rather than a text one."""
-        from bitten.model import TargetPlatform
         cursor = db.cursor()
+
+        rule_schema_v9 = Table('bitten_rule', key=('id', 'propname'))[
+            Column('id', type='int'), Column('propname'), Column('pattern'),
+            Column('orderno', type='int')
+        ]
+
+        env.log.info("Migrating bitten_rule table to integer ids")
         connector, _ = DatabaseManager(env)._get_connector()
 
-        for table in TargetPlatform._schema:
-            if table.name is 'bitten_rule':
-                env.log.info("Migrating bitten_rule table to integer ids")
-                cursor.execute("CREATE TEMPORARY TABLE old_rule AS SELECT * FROM bitten_rule")
-                cursor.execute("DROP TABLE bitten_rule")
-                for stmt in connector.to_sql(table):
-                    cursor.execute(stmt)
-                cursor.execute("INSERT INTO bitten_rule (id,propname,pattern,orderno) SELECT %s,propname,pattern,orderno FROM old_rule" % db.cast('id', 'int'))
+        cursor.execute("CREATE TEMPORARY TABLE old_rule_v9 AS SELECT * FROM bitten_rule")
+        cursor.execute("DROP TABLE bitten_rule")
+        for stmt in connector.to_sql(rule_schema_v9):
+            cursor.execute(stmt)
+        cursor.execute("INSERT INTO bitten_rule (id,propname,pattern,orderno) "
+            "SELECT %s,propname,pattern,orderno FROM old_rule_v9" % db.cast('id', 'int'))
 
 def add_config_platform_rev_index_to_build(env, db):
     """Adds a unique index on (config, platform, rev) to the bitten_build table.
