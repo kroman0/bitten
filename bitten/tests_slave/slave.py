@@ -9,18 +9,42 @@
 # are also available at http://bitten.edgewall.org/wiki/License.
 
 import os
+import sys
 import shutil
 import tempfile
 import unittest
 
 from bitten.slave import BuildSlave, ExitSlave
+from bitten.util import xmlio
 from bitten.slave import encode_multipart_formdata
+
+class DummyResponse(object):
+    def __init__(self, code):
+        self.code = code
+
+class TestSlave(BuildSlave):
+
+    def __init__(self, filename, work_dir):
+        BuildSlave.__init__(self, [filename], work_dir=work_dir)
+        self.results = []
+
+    def _gather(self, method, url, body=None, headers=None):
+        self.results.append(xmlio.parse(body))
+        return DummyResponse(201)
+
+    def _execute_step(self, _build_url, recipe, step):
+        old_local, old_request = self.local, self.request
+        try:
+            self.local, self.request = False, self._gather
+            return BuildSlave._execute_step(self, 'dummy_build', recipe, step)
+        finally:
+            self.local, self.request = old_local, old_request
 
 class BuildSlaveTestCase(unittest.TestCase):
 
     def setUp(self):
         self.work_dir = tempfile.mkdtemp(prefix='bitten_test')
-        self.slave = BuildSlave([], work_dir=self.work_dir)
+        self.python_path = xmlio._escape_attr(sys.executable)
 
     def tearDown(self):
         shutil.rmtree(self.work_dir)
@@ -31,8 +55,53 @@ class BuildSlaveTestCase(unittest.TestCase):
         fd.close()
         return filename
 
+    def _run_slave(self, recipe):
+        results = []
+        filename = self._create_file("recipe.xml")
+        recipe_file = file(filename, "wb")
+        recipe_file.write(recipe)
+        recipe_file.close()
+        slave = TestSlave(filename, self.work_dir)
+        slave.run()
+        return slave.results
+
     def test_quit_raises(self):
+        self.slave = BuildSlave([], work_dir=self.work_dir)
         self.assertRaises(ExitSlave, self.slave.quit)
+
+    def test_simple_recipe(self):
+        results = self._run_slave("""
+        <build xmlns:sh="http://bitten.edgewall.org/tools/sh"
+            >
+            <step id="print">
+                <sh:exec executable="%s" args='-c "print (\\"Hello\\")"' />
+            </step>    
+        </build>""" % self.python_path)
+
+        result = results[0]
+        self.assertEqual(result.attr["step"], "print")
+        self.assertEqual(result.attr["status"], "success")
+        log = list(result)[0]
+        msg = list(log)[0]
+        self.assertEqual(str(msg), '<message level="info">Hello</message>')
+
+    def test_non_utf8(self):
+        results = self._run_slave("""
+        <build xmlns:sh="http://bitten.edgewall.org/tools/sh"
+            >
+            <step id="print">
+                <sh:exec executable="%s" args='-c "print (\\"\\xe9\\")"' />
+            </step>    
+        </build>""" % self.python_path)
+
+        result = results[0]
+        self.assertEqual(result.attr["step"], "print")
+        self.assertEqual(result.attr["status"], "success")
+        log = list(result)[0]
+        msg = list(log)[0]
+        # check replacement character (\uFFFD) was generated correctly
+        self.assertEqual(str(msg).decode("utf-8"),
+            u'<message level="info">\uFFFD</message>')
 
 class MultiPartEncodeTestCase(unittest.TestCase):
 
