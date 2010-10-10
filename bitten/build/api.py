@@ -44,7 +44,7 @@ def _decode(text):
     try:
         return text.decode('utf-8')
     except UnicodeDecodeError:
-        return text.decode(sys.stdout.encoding, 'replace')
+        return text.decode(getattr(sys.stdout, 'encoding', 'utf-8'), 'replace')
 
 
 class CommandLine(object):
