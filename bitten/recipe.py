@@ -171,20 +171,15 @@ class Context(object):
         :param resource: which resource to attach the file to,
                    either 'build' (default) or 'config'
         """
-        filename = self.resolve(file_)
-        try:
-            fileobj = open(filename, 'rb')
-            try:
-                xml_elem = xmlio.Element('file',
-                                filename=os.path.basename(filename),
-                                description=description,
+        # Attachments are not added as inline xml, so only adding
+        # the details for later processing.
+        if not file_:
+            self.error('No attachment file specified.')
+            return
+        xml_elem = xmlio.Element('file', filename=file_,
+                                description=description or '',
                                 resource=resource or 'build')
-                xml_elem.append(fileobj.read().encode('base64'))
-                self.output.append((Recipe.ATTACH, None, None, xml_elem))
-            finally:
-                fileobj.close()
-        except IOError, e:
-            self.error('Failed to read file %s as attachment' % file_)
+        self.output.append((Recipe.ATTACH, None, None, xml_elem))
 
     def resolve(self, *path):
         """Return the path of a file relative to the base directory.

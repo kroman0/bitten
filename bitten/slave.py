@@ -26,6 +26,7 @@ import re
 import cookielib
 import threading
 import os
+import mimetools
 from ConfigParser import MissingSectionHeaderError
 
 from bitten import PROTOCOL_VERSION
@@ -72,6 +73,58 @@ class SaneHTTPRequest(urllib2.Request):
         if self.method is None:
             self.method = self.has_data() and 'POST' or 'GET'
         return self.method
+
+
+def encode_multipart_formdata(fields):
+    """
+    Given a dictionary field parameters, returns the HTTP request body and the
+    content_type (which includes the boundary string), to be used with an
+    httplib-like call.
+
+    Normal key/value items are treated as regular parameters, but key/tuple
+    items are treated as files, where a value tuple is a (filename, data) tuple.
+
+    For example:
+        fields = {
+            'foo': 'bar',
+            'foofile': ('foofile.txt', 'contents of foofile'),
+        }
+        body, content_type = encode_multipart_formdata(fields)
+    
+    Note: Adapted from http://code.google.com/p/urllib3/ (MIT license)
+    """
+
+    BOUNDARY = mimetools.choose_boundary()
+    ENCODE_TEMPLATE= "--%(boundary)s\r\n" \
+        "Content-Disposition: form-data; name=\"%(name)s\"\r\n" \
+        "\r\n%(value)s\r\n"
+    ENCODE_TEMPLATE_FILE = "--%(boundary)s\r\n" \
+        "Content-Disposition: form-data; name=\"%(name)s\"; " \
+                "filename=\"%(filename)s\"\r\n" \
+        "Content-Type: %(contenttype)s\r\n" \
+        "\r\n%(value)s\r\n"
+
+    body = ""
+    for key, value in fields.iteritems():
+        if isinstance(value, tuple):
+            filename, value = value
+            body += ENCODE_TEMPLATE_FILE % {
+                        'boundary': BOUNDARY,
+                        'name': str(key),
+                        'value': str(value),
+                        'filename': str(filename),
+                        'contenttype': 'application/octet-stream'
+                    }
+        else:
+            body += ENCODE_TEMPLATE % {
+                        'boundary': BOUNDARY,
+                        'name': str(key),
+                        'value': str(value)
+                    }
+    body += '--%s--\r\n' % BOUNDARY
+    content_type = 'multipart/form-data; boundary=%s' % BOUNDARY
+    return body, content_type
+
 
 class KeepAliveThread(threading.Thread):
     "A thread to periodically send keep-alive messages to the master"
@@ -401,6 +454,10 @@ class BuildSlave(object):
                     failed = True
                 if type == Recipe.REPORT and self.dump_reports:
                     print output
+                if type == Recipe.ATTACH:
+                    # Attachments are added out-of-band due to major
+                    # performance issues with inlined base64 xml content
+                    self._attach_file(build_url, recipe, output)
                 xml.append(xmlio.Element(type, category=category,
                                          generator=generator)[
                     output
@@ -442,6 +499,32 @@ class BuildSlave(object):
                 log.error('Unexpected response (%d): %s', resp.code, resp.msg)
         raise ExitSlave(exit_code)
 
+    def _attach_file(self, build_url, recipe, attachment):
+        form_token = recipe._root.attr.get('form_token', '')
+        if self.local or self.dry_run or not form_token:
+            log.info('Attachment %s not sent due to current slave options',
+                        attachment.attr['file'])
+            return
+        resource_type = attachment.attr['resource']
+        url = str(build_url + '/attach/' + resource_type)
+        path = recipe.ctxt.resolve(attachment.attr['filename'])
+        filename = os.path.basename(path)
+        log.debug('Attaching file %s to %s...', attachment.attr['filename'],
+                                                    resource_type)
+        f = open(path)
+        try:
+            data, content_type = encode_multipart_formdata({
+                                'file': (filename, f.read()),
+                                'description': attachment.attr['description'],
+                                '__FORM_TOKEN': form_token})
+        finally:
+            f.close()
+        resp = self.request('POST', url , data, {
+                                'Content-Type': content_type})
+        if not resp.code == 201:
+            msg = 'Error attaching %s to %s'
+            log.error(msg, filename, resource_type)
+            raise BuildError(msg, filename, resource_type)
 
 class ExitSlave(Exception):
     """Exception used internally by the slave to signal that the slave process

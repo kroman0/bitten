@@ -32,6 +32,7 @@ from trac.web import IRequestHandler, IRequestFilter, HTTPNotFound
 from trac.web.chrome import INavigationContributor, ITemplateProvider, \
                             add_link, add_stylesheet, add_ctxtnav, \
                             prevnext_nav, add_script
+from trac.versioncontrol import NoSuchChangeset
 from trac.wiki import wiki_to_html, wiki_to_oneliner
 from bitten.api import ILogFormatter, IReportChartGenerator, IReportSummarizer
 from bitten.master import BuildMaster
@@ -261,6 +262,7 @@ class BuildConfigController(Component):
                         chgset = repos.get_changeset(rev)
                         config_data['youngest_rev'] = {
                             'id': rev, 'href': req.href.changeset(rev),
+                            'display_rev': repos.normalize_rev(rev),
                             'author': chgset.author or 'anonymous',
                             'date': format_datetime(chgset.date),
                             'message': wiki_to_oneliner(
@@ -458,6 +460,7 @@ class BuildConfigController(Component):
                     revisions.append(rev)
                 builds.setdefault(rev, {})
                 builds[rev].setdefault('href', req.href.changeset(rev))
+                builds[rev].setdefault('display_rev', repos.normalize_rev(rev))
                 if build and build.status != Build.PENDING:
                     build_data = _get_build_data(self.env, req, build)
                     build_data['steps'] = []
@@ -603,6 +606,7 @@ class BuildController(Component):
         _has_permission(repos, config.path, req.perm, True)
         chgset = repos.get_changeset(build.rev)
         data['build']['chgset_author'] = chgset.author
+        data['build']['display_rev'] = repos.normalize_rev(build.rev)
 
         add_script(req, 'common/js/folding.js')
         add_script(req, 'bitten/tabset.js')
@@ -657,9 +661,10 @@ class BuildController(Component):
                                              db=db):
                     errors += [(step.name, error) for error
                                in step.errors]
-
+            display_rev = repos.normalize_rev(rev)
             yield (event_kinds[status], to_datetime(stopped, utc), None,
-                        (id_, config, label, rev, platform, status, errors))
+                        (id_, config, label, display_rev, platform, status,
+                         errors))
 
     def render_timeline_event(self, context, field, event):
         id_, config, label, rev, platform, status, errors = event[3]

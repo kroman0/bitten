@@ -131,6 +131,8 @@ class BuildMaster(Component):
 
         if req.args['collection'] == 'steps':
             return self._process_build_step(req, config, build)
+        elif req.args['collection'] == 'attach':
+            return self._process_attachment(req, config, build)
         elif req.args['collection'] == 'keepalive':
             return self._process_keepalive(req, config, build)
         else:
@@ -258,6 +260,7 @@ class BuildMaster(Component):
         target_platform = TargetPlatform.fetch(self.env, build.platform)
         xml.attr['platform'] = target_platform.name
         xml.attr['name'] = build.slave
+        xml.attr['form_token'] = req.form_token # For posting attachments
         body = str(xml)
 
         self.log.info('Build slave %r initiated build %d', build.slave,
@@ -349,25 +352,6 @@ class BuildMaster(Component):
                 report.items.append(item)
             report.insert(db=db)
 
-        # Collect attachments from the request body
-        for attach_elem in elem.children(Recipe.ATTACH):
-            attach_elem = list(attach_elem.children('file'))[0] # One file only
-            filename = attach_elem.attr.get('filename')
-            resource_id = attach_elem.attr.get('resource') == 'config' \
-                                    and build.config or build.resource.id
-
-            try: # Delete attachment if it already exists
-                old_attach = Attachment(self.env, 'build',
-                                    parent_id=resource_id, filename=filename)
-                old_attach.delete()
-            except ResourceNotFound:
-                pass
-            attachment = Attachment(self.env, 'build', parent_id=resource_id)
-            attachment.description = attach_elem.attr.get('description')
-            attachment.author = req.authname
-            fileobj = StringIO(attach_elem.gettext().decode('base64'))
-            attachment.insert(filename, fileobj, fileobj.len, db=db)
-
         # If this was the last step in the recipe we mark the build as
         # completed otherwise just update last_activity
         if last_step:
@@ -418,6 +402,38 @@ class BuildMaster(Component):
                             'Location': req.abs_href.builds(
                                     build.id, 'steps', stepname)})
 
+    def _process_attachment(self, req, config, build):
+        resource_id = req.args['member'] == 'config' \
+                    and build.config or build.resource.id
+        upload = req.args['file']
+        if not upload.file:
+            send_error(req, message="Attachment not received.")
+        self.log.debug('Received attachment %s for attaching to build:%s',
+                      upload.filename, resource_id)
+
+        # Determine size of file
+        upload.file.seek(0, 2) # to the end
+        size = upload.file.tell()
+        upload.file.seek(0)    # beginning again
+
+        # Delete attachment if it already exists
+        try:
+            old_attach = Attachment(self.env, 'build',
+                            parent_id=resource_id, filename=upload.filename)
+            old_attach.delete()
+        except ResourceNotFound:
+            pass
+
+        # Save new attachment
+        attachment = Attachment(self.env, 'build', parent_id=resource_id)
+        attachment.description = req.args.get('description', '')
+        attachment.author = req.authname
+        attachment.insert(upload.filename, upload.file, size)
+
+        self._send_response(req, 201, 'Attachment created', headers={
+                            'Content-Type': 'text/plain',
+                            'Content-Length': str(len('Attachment created'))})
+
     def _process_keepalive(self, req, config, build):
         build.last_activity = int(time.time())
         build.update()
@@ -429,7 +445,6 @@ class BuildMaster(Component):
         self._send_response(req, 200, body, {
                             'Content-Type': 'text/plain',
                             'Content-Length': str(len(body))})
-
 
     def _start_new_step(self, build, stepname):
         """Creates the in-memory representation for a newly started

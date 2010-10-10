@@ -45,23 +45,9 @@ class ContextTestCase(unittest.TestCase):
         except InvalidRecipeError, e:
             self.failUnless("Unsupported argument 'foo'" in str(e))
 
-    def test_attach_file_non_existing(self):
-        # Verify that it raises error and that it gets logged
-        ctxt = Context(self.basedir, Configuration())
-        ctxt.attach(file_='nonexisting.txt',
-                      description='build build')
-
-        self.assertEquals(1, len(ctxt.output))
-        self.assertEquals(Recipe.ERROR, ctxt.output[0][0])
-        self.assertEquals('Failed to read file nonexisting.txt as attachment',
-                            ctxt.output[0][3])
-
     def test_attach_file_config(self):
         # Verify output from attaching a file to a config
         ctxt = Context(self.basedir, Configuration())
-        test_file = open(os.path.join(self.basedir, 'config.txt'), 'w')
-        test_file.write('hello config')
-        test_file.close()
 
         ctxt.attach(file_='config.txt', description='config config',
                       resource='config')
@@ -70,16 +56,11 @@ class ContextTestCase(unittest.TestCase):
         attach_xml = ctxt.output[0][3]
         self.assertEquals('<file resource="config" '
                           'description="config config" '
-                          'filename="config.txt">'
-                          'aGVsbG8gY29uZmln\n'
-                          '</file>', str(attach_xml))
+                          'filename="config.txt"/>', str(attach_xml))
 
     def test_attach_file_build(self):
         # Verify output from attaching a file to a build
         ctxt = Context(self.basedir, Configuration())
-        test_file = open(os.path.join(self.basedir, 'build.txt'), 'w')
-        test_file.write('hello build')
-        test_file.close()
 
         ctxt.attach(file_='build.txt', description='build build')
         self.assertEquals(1, len(ctxt.output))
@@ -87,9 +68,7 @@ class ContextTestCase(unittest.TestCase):
         attach_xml = ctxt.output[0][3]
         self.assertEquals('<file resource="build" '
                           'description="build build" '
-                          'filename="build.txt">'
-                          'aGVsbG8gYnVpbGQ=\n'
-                          '</file>', str(attach_xml))
+                          'filename="build.txt"/>', str(attach_xml))
 
 class RecipeTestCase(unittest.TestCase):
 
