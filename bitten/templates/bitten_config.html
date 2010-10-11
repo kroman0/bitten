@@ -8,7 +8,7 @@
   <xi:include href="macros.html" />
   <head>
     <title>$title</title>
-    <script type="text/javascript" src="${chrome.htdocs_location}../bitten/jquery.flot.js"></script>
+    <script type="text/javascript" src="${req.href.chrome('bitten', 'jquery.flot.js')}"></script>
   </head>
   <body>
     <strong py:def="build_status(status)" class="status">
