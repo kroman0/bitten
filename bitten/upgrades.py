@@ -157,6 +157,8 @@ def add_last_activity_to_build(env, db):
                    "SELECT id,config,rev,rev_time,platform,"
                    "slave,started,stopped,stopped,status FROM old_build_v11")
 
+    update_sequence(env, db, 'bitten_build', 'id')
+
 def add_config_to_reports(env, db):
     """Add the name of the build configuration as metadata to report documents
     stored in the BDB XML database."""
