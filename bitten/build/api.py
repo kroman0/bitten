@@ -36,15 +36,21 @@ def _encode(text):
     """Encode input for call. Input must be unicode or utf-8 string."""
     if not isinstance(text, unicode):
         text = unicode(text, 'utf-8')
-    return text.encode(
-                sys.getfilesystemencoding() or sys.stdin.encoding, 'replace')
+    # sys.stdin.encoding might be None (if stdin is directed from a file)
+    # sys.stdin.encoding might be missing (if it is a StringIO object)
+    encoding = sys.getfilesystemencoding() or \
+                getattr(sys.stdin, 'encoding', None) or 'utf-8'
+    return text.encode(encoding, 'replace')
 
 def _decode(text):
     """Decode output from call."""
     try:
         return text.decode('utf-8')
     except UnicodeDecodeError:
-        return text.decode(getattr(sys.stdout, 'encoding', 'utf-8'), 'replace')
+        # sys.stdout.encoding might be None (if stdout is directed to a file)
+        # sys.stdout.encoding might be missing (if it is a StringIO object)
+        encoding = getattr(sys.stdout, 'encoding', None) or 'utf-8'
+        return text.decode(encoding, 'replace')
 
 
 class CommandLine(object):
