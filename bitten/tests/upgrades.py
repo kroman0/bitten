@@ -35,7 +35,7 @@ class BaseUpgradeTestCase(unittest.TestCase):
             # Trac gained support for testing against different databases in 0.11.5
             # If this support is available, we copy the test db uri configuration
             # into the main test config so it can be picked up by
-            # upgrades._parse_scheme()
+            # upgrades.parse_scheme()
             self.env.config.set('trac', 'database', self.env.dburi)
         self.env.path = tempfile.mkdtemp()
         logs_dir = self.env.config.get("bitten", "logs_dir", "log/bitten")
@@ -166,10 +166,10 @@ class UpgradeScriptsTestCase(BaseUpgradeTestCase):
         'bitten_report_item',
         'bitten_error',
         'old_step',
-        'old_config',
+        'old_config_v2',
         'old_log_v5',
         'old_log_v8',
-        'old_rule',
+        'old_rule_v9',
         'old_build_v11',
     ]
 
@@ -230,8 +230,6 @@ class UpgradeScriptsTestCase(BaseUpgradeTestCase):
 
     def _check_basic_upgrade(self):
         """Check the results of an upgrade of basic data."""
-        db = self.env.get_db_cnx()
-
         configs = list(model.BuildConfig.select(self.env,
             include_inactive=True))
         platforms = list(model.TargetPlatform.select(self.env))
@@ -264,6 +262,33 @@ class UpgradeScriptsTestCase(BaseUpgradeTestCase):
         self.assertEqual(logs[0].step, 'step2')
         log_file = logs[0].get_log_file(logs[0].filename)
         self.assertEqual(file(log_file, "rU").read(), "line1\nline2\n")
+
+        # check final sequences
+        for tbl, col in [
+            ('bitten_build', 'id'),
+            ('bitten_log', 'id'),
+            ('bitten_platform', 'id'),
+            ('bitten_report', 'id'),
+        ]:
+            self._check_sequence(tbl, col)
+
+    def _check_sequence(self, tbl, col):
+        scheme = upgrades.parse_scheme(self.env)
+        if scheme == "postgres":
+            self._check_postgres_sequence(tbl, col)
+
+    def _check_postgres_sequence(self, tbl, col):
+        """Check a PostgreSQL sequence for the given table and column."""
+        seq = '%s_%s_seq' % (tbl, col)
+        cursor = self.env.get_db_cnx().cursor()
+        cursor.execute("SELECT MAX(%s) FROM %s" % (col, tbl))
+        current_max = cursor.fetchone()[0] or 0 # if currently None
+        cursor.execute("SELECT nextval('%s')" % (seq,))
+        current_seq = cursor.fetchone()[0] - 1
+        self.assertEqual(current_max, current_seq,
+            "On %s (col: %s) expected column max (%d) "
+            "and sequence value (%d) to match"
+            % (tbl, col, current_max, current_seq))
 
     def test_null_upgrade(self):
         self._do_upgrade()

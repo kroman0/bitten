@@ -25,7 +25,7 @@ __docformat__ = 'restructuredtext en'
 
 # database abstraction functions
 
-def _parse_scheme(env):
+def parse_scheme(env):
     """Retrieve the environment database scheme."""
     connection_uri = DatabaseManager(env).connection_uri
     parts = connection_uri.split(':', 1)
@@ -36,7 +36,7 @@ def update_sequence(env, db, tbl, col):
     """Update a sequence associated with an autoincrement column."""
     # Hopefully Trac will eventually implement its own version
     # of this function.
-    scheme = _parse_scheme(env)
+    scheme = parse_scheme(env)
     if scheme == "postgres":
         seq = '%s_%s_seq' % (tbl, col)
         cursor = db.cursor()
@@ -47,7 +47,7 @@ def drop_index(env, db, tbl, idx):
     """Drop an index associated with a table."""
     # Hopefully Trac will eventually implement its own version
     # of this function.
-    scheme = _parse_scheme(env)
+    scheme = parse_scheme(env)
     cursor = db.cursor()
     if scheme == "mysql":
         cursor.execute("DROP INDEX %s ON %s" % (idx, tbl))
@@ -593,7 +593,7 @@ def add_config_platform_rev_index_to_build(env, db):
 
     if not duplicates_exist:
         cursor = db.cursor()
-        scheme = _parse_scheme(env)
+        scheme = parse_scheme(env)
         if scheme == "mysql":
             # 111 = 333 / len(columns in index) -- this is the Trac default
             cursor.execute("CREATE UNIQUE INDEX bitten_build_config_rev_platform_idx ON bitten_build (config(111), rev(111), platform)")
