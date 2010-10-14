@@ -222,7 +222,8 @@ class TestCoverageAnnotator(Component):
         reports = []
         for build in builds:
             config = BuildConfig.fetch(self.env, build.config)
-            if not resource.id.startswith('/' + config.path.lstrip('/')):
+            # Normalize paths and check (Trac version inconsistencies)
+            if not resource.id.lstrip('/').startswith(config.path.lstrip('/')):
                 continue
             reports = Report.select(self.env, build=build.id,
                                     category='coverage')
