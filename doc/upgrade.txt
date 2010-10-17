@@ -51,6 +51,19 @@ versions 9 through 12.
 .. [#] http://bitten.edgewall.org/browser/trunk/contrib/deletebuild.py
 
 
+Reporting Upgrade Issues
+========================
+
+Debugging upgrade issues can be difficult since the Bitten development team
+does not have access to your database.  Attaching a description of your
+database schema before and after running `trac-admin upgrade` to your
+request for assistance may help others diagnose the problem more swiftly.
+
+You can create such a schema description using Gerald_ or a similar tool.
+
+.. [gerald] http://pypi.python.org/pypi/gerald
+
+
 Upgrade history
 ===============
 
