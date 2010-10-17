@@ -45,10 +45,10 @@ builds could arise. Before the upgrade to schema version 10 can complete, these
 duplicate builds must be removed. The `trac-admin upgrade` will produce a list
 of duplicates but the decision on which to keep remains with the user.
 
-A script for removing builds is provided [#]_. This scripts supports schema
+A script_ for removing builds is provided. This scripts supports schema
 versions 9 through 12.
 
-.. [#] http://bitten.edgewall.org/browser/trunk/contrib/deletebuild.py
+.. _script: http://bitten.edgewall.org/browser/trunk/contrib/deletebuild.py
 
 
 Reporting Upgrade Issues
@@ -61,7 +61,7 @@ request for assistance may help others diagnose the problem more swiftly.
 
 You can create such a schema description using Gerald_ or a similar tool.
 
-.. [gerald] http://pypi.python.org/pypi/gerald
+.. _gerald: http://pypi.python.org/pypi/gerald
 
 
 Upgrade history
