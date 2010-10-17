@@ -432,8 +432,14 @@ def migrate_logs_to_files(env, db):
     logs_dir = env.config.get("bitten", "logs_dir", "log/bitten")
     if not os.path.isabs(logs_dir):
         logs_dir = os.path.join(env.path, logs_dir)
-    if not os.path.exists(logs_dir):
-        os.makedirs(logs_dir)
+
+    if os.path.exists(logs_dir):
+        print "Bitten log folder %r already exists" % (logs_dir,)
+        print "Upgrade cannot be performed until the existing folder is moved."
+        print "The upgrade script will now exit with an error:\n"
+        raise TracError("")
+
+    os.makedirs(logs_dir)
 
     cursor = db.cursor()
     message_cursor = db.cursor()

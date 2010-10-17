@@ -14,6 +14,7 @@ import warnings
 warnings.filterwarnings('ignore', '^Unknown table')
 warnings.filterwarnings('ignore', '^the sets module is deprecated')
 
+from trac.core import TracError
 from trac.test import EnvironmentStub
 from trac.db import Table, Column, Index, DatabaseManager
 from bitten.upgrades import update_sequence, drop_index
@@ -42,8 +43,6 @@ class BaseUpgradeTestCase(unittest.TestCase):
         if os.path.isabs(logs_dir):
             raise ValueError("Should not have absolute logs directory for temporary test")
         logs_dir = os.path.join(self.env.path, logs_dir)
-        if not os.path.isdir(logs_dir):
-            os.makedirs(logs_dir)
         self.logs_dir = logs_dir
 
         db = self.env.get_db_cnx()
@@ -327,6 +326,7 @@ class UpgradeScriptsTestCase(BaseUpgradeTestCase):
             "4.log.level",
         ]
 
+        os.makedirs(self.logs_dir)
         for filename, data in logfiles.items():
             path = os.path.join(self.logs_dir, filename)
             logfile = open(path, "w")
@@ -371,6 +371,7 @@ class UpgradeScriptsTestCase(BaseUpgradeTestCase):
             "2.log.levels",
         ]
 
+        os.makedirs(self.logs_dir)
         for filename, data in logfiles.items():
             path = os.path.join(self.logs_dir, filename)
             logfile = open(path, "w")
@@ -397,6 +398,11 @@ class UpgradeScriptsTestCase(BaseUpgradeTestCase):
             "Deleted 1 stray log levels (0 errors)"))
         self.assertTrue(logs[1].getMessage().startswith(
             "Deleted stray log levels file 2.log.levels"))
+
+    def test_migrate_logs_to_files_with_logs_dir(self):
+        os.makedirs(self.logs_dir)
+        self.assertRaises(TracError, upgrades.migrate_logs_to_files,
+            self.env, None)
 
 
 def suite():
