@@ -9,18 +9,46 @@ Upgrading
 .. sectnum::
 
 
+Bitten's database schema is versioned using the `bitten_version` entry in
+Trac's system table. If you install a version of Bitten with a more recent
+schema you will need to run `trac-admin update` after installing Bitten to
+update your database. Until this done Trac will not activate your new
+Bitten installation.
+
 .. note::
 
-   TODO: Outline upgrade procedure, including committing of upgrades after
-   each step.
+   You should back up your Trac database and Trac environment before running
+   `trac-admin upgrade`.
+
+.. note::
+
+   If you are using a SQLite database file, Trac automatically creates a copy
+   before proceeding with the update. This should not be relied upon but can
+   be useful if you have ignored the advice above.
+
+Bitten's upgrade scripts attempt to commit changes made to the database each
+time a new schema version is reached. This ensures that if an upgrade fails
+to complete the Bitten database is left in the most up-to-date state possible.
+
+For example, if you were upgrading from Bitten schema 6 to schema version 12
+and duplicate builds were found during the attempt to upgrade to schema 10, your
+database would be left at schema 9.
       
 
-Manually Removing Builds
-========================
+Removing Duplicate Builds
+=========================
 
-.. note::
+Bitten schema version 10 adds a unique index on the columns
+`(config, platform, rev)` to the `bitten_build` table. This constraint is
+relied on by Bitten but was not enforced in earlier versions and duplicate
+builds could arise. Before the upgrade to schema version 10 can complete, these
+duplicate builds must be removed. The `trac-admin upgrade` will produce a list
+of duplicates but the decision on which to keep remains with the user.
 
-   TODO: Write this section
+A script for removing builds is provided [#]_. This scripts supports schema
+versions 9 through 12.
+
+.. [#] http://bitten.edgewall.org/browser/trunk/contrib/deletebuild.py
 
 
 Upgrade history
