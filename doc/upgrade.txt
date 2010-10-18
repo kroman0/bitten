@@ -5,7 +5,7 @@ Upgrading
 =========
 
 .. contents:: Contents
-   :depth: 2
+   :depth: 1
 .. sectnum::
 
 
