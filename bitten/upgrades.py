@@ -588,11 +588,10 @@ def add_config_platform_rev_index_to_build(env, db):
 
     if duplicates_exist:
         print "--------------------------------------------------------\n"
-        print "Duplicate builds found. You can remove the builds you don't want to"
-        print "keep by using this one-line command:\n"
-        print "$  python -c \"from bitten.model import Build; from trac.env import Environment; " \
-                        "Build.fetch(Environment('%s'), <buildid>).delete()\"" % env.path
-        print "\n...where <buildid> is the id of the build to remove.\n"
+        print "Duplicate builds found. You can obtain help on removing the"
+        print "builds you don't want by reading the Bitten upgrade"
+        print "documentation at:"
+        print "http://bitten.edgewall.org/wiki/Documentation/upgrade.html"
         print "Upgrades cannot be performed until conflicts are resolved."
         print "The upgrade script will now exit with an error:\n"
 
