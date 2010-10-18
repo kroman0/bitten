@@ -47,6 +47,7 @@ class BuildDeleter(object):
     def discover(self, build):
         """Print a summary of what is linked to the build."""
         print "Items to delete for build %r" % (build,)
+        print "-------------------------------"
 
         db = self.env.get_db_cnx()
         cursor = db.cursor()
@@ -54,28 +55,28 @@ class BuildDeleter(object):
         print "Attachments for build resource:"
         cursor.execute("SELECT config FROM bitten_build WHERE id=%s", (build,))
         config = cursor.fetchone()[0]
-        print "\n  %s/%s" % (config, build)
+        print "  %s/%s" % (config, build)
 
         print "Log files:"
-        print "\n  ".join(self._log_files(cursor, build))
+        print " ", "\n  ".join(self._log_files(cursor, build))
 
         print "Rows from bitten_log with ids:"
         cursor.execute("SELECT id FROM bitten_log WHERE build=%s", (build,))
-        print "\n  ".join(row[0] for row in cursor.fetchall())
+        print " ", "\n  ".join(str(row[0]) for row in cursor.fetchall())
 
         print "Rows from bitten_report with ids:"
         cursor.execute("SELECT id FROM bitten_report WHERE build=%s", (build,))
-        print "\n  ".join(row[0] for row in cursor.fetchall())
+        print " ", "\n  ".join(str(row[0]) for row in cursor.fetchall())
         print "Rows from bitten_report_item with report set to these ids will"
         print "also be deleted."
 
         print "Rows from bitten_step for this build with names:"
         cursor.execute("SELECT name FROM bitten_step WHERE build=%s", (build,))
-        print "\n  ".join(row[0] for row in cursor.fetchall())
+        print " ", "\n  ".join(str(row[0]) for row in cursor.fetchall())
 
         print "Row from bitten_build with id:"
-        cursor.execute("SELECT name FROM bitten_step WHERE build=%s", (build,))
-        print "\n  ".join(row[0] for row in cursor.fetchall())
+        cursor.execute("SELECT id FROM bitten_build WHERE id=%s", (build,))
+        print " ", "\n  ".join(str(row[0]) for row in cursor.fetchall())
 
     def remove(self, build):
         """Delete what is linked to the build."""
