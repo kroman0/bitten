@@ -84,7 +84,8 @@ def encode_multipart_formdata(fields):
     Normal key/value items are treated as regular parameters, but key/tuple
     items are treated as files, where a value tuple is a (filename, data) tuple.
 
-    For example:
+    For example::
+
         fields = {
             'foo': 'bar',
             'foofile': ('foofile.txt', 'contents of foofile'),
@@ -208,7 +209,7 @@ class BuildSlave(object):
         :param poll_interval: the time in seconds to wait between requesting
                               builds from the build master (default is five
                               minutes)
-        :param keep_alive_interval: the time in seconds to wait between sending
+        :param keepalive_interval: the time in seconds to wait between sending
                                     keepalive heartbeats (default is 30 seconds)
         :param username: the username to use when authentication against the
                          build master is requested
