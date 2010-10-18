@@ -26,5 +26,6 @@ user interface.
  * `Build Links <links.html>`_
  * `Notification <notify.html>`_
  * `Report Formats <reports.html>`_
+ * `Upgrading Bitten <upgrade.html>`_
  * `Generated API Documentation <api/index.html>`_
  
