@@ -143,6 +143,8 @@ class BuildMaster(Component):
 
     def _send_response(self, req, code=200, body='', headers=None):
         """ Formats and sends the response, raising ``RequestDone``. """
+        if isinstance(body, unicode):
+            body = body.encode('utf-8')
         req.send_response(code)
         headers = headers or {}
         headers.setdefault('Content-Length', len(body))
