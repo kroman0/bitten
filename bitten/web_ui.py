@@ -321,7 +321,7 @@ class BuildConfigController(Component):
             builds = []
             # sort correctly by revision.
             for build in sorted(in_progress_builds,
-                                cmp=lambda x, y: int(y.rev) - int(x.rev)):
+                                cmp=lambda x, y: int(y.rev_time) - int(x.rev_time)):
                 rev = build.rev
                 build_data = _get_build_data(self.env, req, build)
                 build_data['rev'] = rev
