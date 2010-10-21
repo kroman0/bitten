@@ -54,8 +54,10 @@ _step_status_label = {BuildStep.SUCCESS: 'success',
                       BuildStep.IN_PROGRESS: 'in progress'}
 
 def _get_build_data(env, req, build):
+    platform = TargetPlatform.fetch(env, build.platform)
     data = {'id': build.id, 'name': build.slave, 'rev': build.rev,
             'status': _status_label[build.status],
+            'platform': getattr(platform, 'name', 'unknown'),
             'cls': _status_label[build.status].replace(' ', '-'),
             'href': req.href.build(build.config, build.id),
             'chgset_href': req.href.changeset(build.rev)}
@@ -321,7 +323,7 @@ class BuildConfigController(Component):
             builds = []
             # sort correctly by revision.
             for build in sorted(in_progress_builds,
-                                cmp=lambda x, y: int(y.rev) - int(x.rev)):
+                                cmp=lambda x, y: int(y.rev_time) - int(x.rev_time)):
                 rev = build.rev
                 build_data = _get_build_data(self.env, req, build)
                 build_data['rev'] = rev
