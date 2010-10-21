@@ -54,8 +54,10 @@ _step_status_label = {BuildStep.SUCCESS: 'success',
                       BuildStep.IN_PROGRESS: 'in progress'}
 
 def _get_build_data(env, req, build):
+    platform = TargetPlatform.fetch(env, build.platform)
     data = {'id': build.id, 'name': build.slave, 'rev': build.rev,
             'status': _status_label[build.status],
+            'platform': getattr(platform, 'name', 'unknown'),
             'cls': _status_label[build.status].replace(' ', '-'),
             'href': req.href.build(build.config, build.id),
             'chgset_href': req.href.changeset(build.rev)}

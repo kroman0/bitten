@@ -5,6 +5,7 @@ $build.status build of $project.name [$change.rev]
   Committed by:          $change.author
 
   Build Configuration:   $build.config
+  Build Platform:        $build.platform
   Build Slave:           $build.slave
   Build Number:          $build.id  -  <${build.link}>
 {% if build.failed_steps %}\

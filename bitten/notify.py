@@ -12,7 +12,7 @@ from trac.web.chrome import ITemplateProvider, Chrome
 from trac.config import BoolOption
 from trac.notification import NotifyEmail
 from bitten.api import IBuildListener
-from bitten.model import Build, BuildStep, BuildLog
+from bitten.model import Build, BuildStep, BuildLog, TargetPlatform
 
 
 class BittenNotify(Component):
@@ -123,6 +123,7 @@ class BuildNotifyEmail(NotifyEmail):
     def template_data(self):
         failed_steps = BuildStep.select(self.env, build=self.build.id,
                                         status=BuildStep.FAILURE)
+        platform = TargetPlatform.fetch(self.env, id=self.build.platform)
         change = self.get_changeset()
         return {
             'build': {
@@ -130,6 +131,7 @@ class BuildNotifyEmail(NotifyEmail):
                 'status': self.readable_states[self.build.status],
                 'link': self.build_link(),
                 'config': self.build.config,
+                'platform': getattr(platform, 'name', 'unknown'),
                 'slave': self.build.slave,
                 'failed_steps': [{
                     'name': step.name,
