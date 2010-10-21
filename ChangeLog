@@ -1,12 +1,63 @@
-Version 0.6
-(???, from 0.6.x branch)
-http://svn.edgewall.org/repos/bitten/tags/0.6
+Version 0.6b3
+(21 October 2010, from 0.6.x branch)
+http://svn.edgewall.org/repos/bitten/tags/0.6b3
 
- * ???
+ * Basic support for Trac 0.12, supporting just a '(default)' repository.
+ * For Trac 0.12+ and DVCS repository connectors, shortened revision
+   numbers will be displayed.
+ * Attachments via `<attach />` command is completely redone to eliminate
+   serious performance issues.
+ * Removed sorting of revisions received from Trac as they are already
+   sorted chronologically. Use `rev_time` if any other sorting is needed.
+ * Moved Report Format from wiki to distributable documentation.
+ * Use Genshi `NewTextTemplate` for uniform notification template syntax.
+ * Fixed issue in use of drop index during database upgrade on MySQL.
+ * Added upgrade script to fix sequences on PostgreSQL tables.
+ * Fixed missing field in group by clause that caused lint report submission
+   to fail.
+ * Coverage context menu links correctly, and Coverage from browsing will
+   locate the most recent annotation between currently browsed revision and
+   previous change for file.
+ * Set 'Content-Length' header on master-slave communication.
+ * Fix for an issue where a renamed/deleted config would crash timeline if a
+   build with this config was in range.
+ * Shell output encoding improvements.
+ * Redirect after login will now redirect to same /builds url.
+ * Improved command-line calls on Windows, using shell for built-in commands
+   and scripts (like `java:ant`).
+ * Improvements to the `hg:pull` command.
+ * Support linking to individual steps on builds.
+ * Safer parsing of `java:junit` xml in case an optional attribute is missing.
+ * Delete attachments properly in some corner cases where incomplete builds are
+   cancelled or invalidated.
+ * Improved error messages for failed Python recipe commands specified via
+   a module or function.
+ * Added timeout limiting for shell and python recipe commands.
+ * `onerror` attribute can now be specified on `<build>` elements as well
+   as `<step>` elements.
+ * Charts now only show if there's applicable reports, and restrict themselves
+   to the versions of the active configuration.
+ * Times shown in the ui are now consistently times from the master, and not
+   inter-mixed times between the server and slaves, which caused skew issues.
+ * Steps are now shown while in-progress, and builds are considered aborted
+   based on the time since the last interaction with the serve, not since
+   starting. Slaves now send keepalive messages to the server to avoid timing
+   out during long build steps.
+ * Fix reference to database field in pylint report generation to solve issue
+   running query on PostGreSQL.
+ * Report charting re-implemented using Flot.
+ * Svn commands gained username, password and no_auth_cache options. Verbose
+   flag now behaves less cryptically.
+ * No longer create 'snapshots' directory in environments of new
+   projects (`initenv`).
+ * Added page on upgrades to distributed documentation.
+ * New utility script for removing duplicate builds encountered when upgrading.
+ * Add 'Platform' to Build web display and notifications.
+ * Other minor fixes.
 
 
 Version 0.6b2
-(12 September, from 0.6.x branch)
+(12 September 2010, from 0.6.x branch)
 http://svn.edgewall.org/repos/bitten/tags/0.6b2
 
  * Slave-only install changed to `./setup.py --without-master install` (or any
