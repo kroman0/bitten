@@ -49,7 +49,7 @@ def collect_changes(repos, config, db=None):
     if not db:
         db = env.get_db_cnx()
     try:
-        node = repos.get_node(config.path)
+        node = repos.get_node(config.path, config.max_rev)
     except Exception, e:
         env.log.warn('Error accessing path %r for configuration %r',
                     config.path, config.name, exc_info=True)
