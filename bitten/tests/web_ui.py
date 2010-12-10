@@ -89,7 +89,7 @@ class BuildConfigControllerTestCase(AbstractWebUITestCase):
                                           range(123, 111, -1)])
         self.repos = Mock(get_node=lambda path, rev=None: root,
                           sync=lambda: None, normalize_path=lambda path: path,
-                          normalize_rev=lambda rev: rev)
+                          normalize_rev=lambda rev: rev, youngest_rev=123)
         self.repos.authz = Mock(has_permission=lambda path: True, assert_permission=lambda path: None)
 
         module = BuildConfigController(self.env)
@@ -128,7 +128,7 @@ class BuildConfigControllerTestCase(AbstractWebUITestCase):
         root = Mock(get_entries=lambda: ['foo'], get_history=lambda: revision_list)
         self.repos = Mock(get_node=lambda path, rev=None: root,
                           sync=lambda: None, normalize_path=lambda path: path,
-                          normalize_rev=lambda rev: rev)
+                          normalize_rev=lambda rev: rev, youngest_rev=5)
         self.repos.authz = Mock(has_permission=lambda path: True, assert_permission=lambda path: None)
 
         module = BuildConfigController(self.env)
@@ -155,7 +155,7 @@ class BuildConfigControllerTestCase(AbstractWebUITestCase):
                                           range(123, 110, -1)])
         self.repos = Mock(get_node=lambda path, rev=None: root,
                           sync=lambda: None, normalize_path=lambda path: path,
-                          normalize_rev=lambda rev: rev)
+                          normalize_rev=lambda rev: rev, youngest_rev=123)
         self.repos.authz = Mock(has_permission=lambda path: True, assert_permission=lambda path: None)
 
         module = BuildConfigController(self.env)

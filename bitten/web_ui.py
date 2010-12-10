@@ -22,6 +22,7 @@ from trac.attachment import AttachmentModule, Attachment
 from trac.core import *
 from trac.config import Option
 from trac.mimeview.api import Context
+from trac.perm import PermissionError
 from trac.resource import Resource
 from trac.timeline import ITimelineEventProvider
 from trac.util import escape, pretty_timedelta, format_datetime, shorten_line, \
@@ -31,8 +32,8 @@ from trac.util.html import html
 from trac.web import IRequestHandler, IRequestFilter, HTTPNotFound
 from trac.web.chrome import INavigationContributor, ITemplateProvider, \
                             add_link, add_stylesheet, add_ctxtnav, \
-                            prevnext_nav, add_script
-from trac.versioncontrol import NoSuchChangeset
+                            prevnext_nav, add_script, add_warning
+from trac.versioncontrol import NoSuchChangeset, NoSuchNode
 from trac.wiki import wiki_to_html, wiki_to_oneliner
 from bitten.api import ILogFormatter, IReportChartGenerator, IReportSummarizer
 from bitten.master import BuildMaster
@@ -80,18 +81,17 @@ def _get_build_data(env, req, build):
     }
     return data
 
-def _has_permission(repos, path, perm, raise_error=False):
+def _has_permission(perm, repos, path, rev=None, raise_error=False):
     if hasattr(repos, 'authz'):
         if not repos.authz.has_permission(path):
             if not raise_error:
                 return False
             repos.authz.assert_permission(path)
     else:
-        node = repos.get_node(path)
+        node = repos.get_node(path, rev)
         if not node.can_view(perm):
             if not raise_error:
                 return False
-            from trac.perm import PermissionError
             raise PermissionError('BROWSER_VIEW', node.resource)
     return True
 
@@ -219,7 +219,14 @@ class BuildConfigController(Component):
 
         configs = []
         for config in BuildConfig.select(self.env, include_inactive=show_all):
-            if not _has_permission(repos, config.path, req.perm):
+            rev = config.max_rev or repos.youngest_rev
+            try:
+                if not _has_permission(req.perm, repos, config.path, rev=rev):
+                    continue
+            except NoSuchNode:
+                add_warning(req, "Configuration '%s' points to non-existing "
+                        "path '/%s' at revision '%s'. Configuration skipped." \
+                                    % (config.name, config.path, rev))
                 continue
 
             description = config.description
@@ -309,7 +316,14 @@ class BuildConfigController(Component):
 
         configs = []
         for config in BuildConfig.select(self.env, include_inactive=False):
-            if not _has_permission(repos, config.path, req.perm):
+            rev = config.max_rev or repos.youngest_rev
+            try:
+                if not _has_permission(req.perm, repos, config.path, rev=rev):
+                    continue
+            except NoSuchNode:
+                add_warning(req, "Configuration '%s' points to non-existing "
+                        "path '/%s' at revision '%s'. Configuration skipped." \
+                                    % (config.name, config.path, rev))
                 continue
 
             self.log.debug(config.name)
@@ -375,7 +389,13 @@ class BuildConfigController(Component):
         repos = self.env.get_repository(authname=req.authname)
         assert repos, 'No "(default)" Repository: Add a repository or alias ' \
                       'named "(default)" to Trac.'
-        _has_permission(repos, config.path, req.perm, True)
+        rev = config.max_rev or repos.youngest_rev
+        try:
+            _has_permission(req.perm, repos, config.path, rev=rev,
+                                                        raise_error=True)
+        except NoSuchNode:
+            raise TracError("Permission checking against repository path %s "
+                "at revision %s failed." % (config.path, rev))
 
         data = {'title': 'Build Configuration "%s"' \
                           % config.label or config.name,
@@ -605,7 +625,7 @@ class BuildController(Component):
         repos = self.env.get_repository(authname=req.authname)
         assert repos, 'No "(default)" Repository: Add a repository or alias ' \
                       'named "(default)" to Trac.'
-        _has_permission(repos, config.path, req.perm, True)
+        _has_permission(req.perm, repos, config.path, rev=build.rev, raise_error=True)
         chgset = repos.get_changeset(build.rev)
         data['build']['chgset_author'] = chgset.author
         data['build']['display_rev'] = repos.normalize_rev(build.rev)
@@ -654,7 +674,7 @@ class BuildController(Component):
                        Build.FAILURE: 'failedbuild'}
 
         for id_, config, label, path, rev, platform, stopped, status in cursor:
-            if not _has_permission(repos, path, req.perm):
+            if not _has_permission(req.perm, repos, path, rev=rev):
                 continue
             errors = []
             if status == Build.FAILURE:
