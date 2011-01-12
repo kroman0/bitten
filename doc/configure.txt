@@ -23,10 +23,18 @@ Technically, a target platform is a named set of rules against which the
 properties of build slaves are matched. Each rule is a regular expression
 matching a particular slave property, such as the operating system
 or the processor. When a slave connects to the build master, it sends a
-registration message that includes information about the slave.
+registration message that includes information about the slave. A slave
+will only be sent builds for a given platform if the slave's properties
+satisfy all of the rules associated with that platform.
+
+A rule's regular expression is matched against the value of the slave
+property using Python's `re.match`_ function so, for example, `x86` will
+match a value of `x86_64`. Use `^x86$` to match only the value `x86`.
+
+.. _re.match: http://docs.python.org/library/re.html#re.match
 
 A build configuration must have at least one target platform assigned to
-it before it becomes fully active. 
+it before it becomes fully active.
 
 Slave Properties
 ================
