@@ -512,7 +512,7 @@ class BuildSlave(object):
         filename = os.path.basename(path)
         log.debug('Attaching file %s to %s...', attachment.attr['filename'],
                                                     resource_type)
-        f = open(path)
+        f = open(path, 'rb')
         try:
             data, content_type = encode_multipart_formdata({
                                 'file': (filename, f.read()),
