@@ -146,9 +146,9 @@ class KeepAliveThread(threading.Thread):
         body = None
         shutdown = False
         headers = {
-            'Content-Type': 'application/x-bitten+xml'
+            'Content-Type': 'application/x-bitten+xml',
+            'Content-Length': '0'
             }
-            
         log.debug('Sending %s request to %r', method, url)
         req = SaneHTTPRequest(method, url, body, headers or {})
         try:
