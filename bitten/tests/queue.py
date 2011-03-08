@@ -352,6 +352,21 @@ class BuildQueueTestCase(unittest.TestCase):
         self.assertEqual(True, queue.should_delete_build(build, self.repos))
         self.assert_("configuration is deactivated" in messages[0])
 
+    def test_should_delete_build_config_none(self):
+        out = []
+        self.env.log = Mock(
+                        info=lambda msg, *args: out.extend([msg] + list(args)))
+        platform = TargetPlatform(self.env, config='test', name='stuff')
+        platform.insert()
+        build = Build(self.env, config='does_not_exist', rev=42,
+                        platform=platform.id, rev_time=123456)
+        build.insert()
+        queue = BuildQueue(self.env, build_all=True)
+
+        self.assertEqual(True, queue.should_delete_build(build, self.repos))
+        self.assertTrue("configuration is deactivated" in out[0])
+        self.assertEquals('unknown config "does_not_exist"', out[1])
+
     def test_should_delete_build_outside_revision_range(self):
         messages = []
         self.env.log = Mock(info=lambda msg, *args: messages.append(msg))

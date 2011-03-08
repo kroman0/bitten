@@ -305,6 +305,8 @@ class BuildQueue(object):
 
     def should_delete_build(self, build, repos):
         config = BuildConfig.fetch(self.env, build.config)
+        config_name = config and config.name \
+                        or 'unknown config "%s"' % build.config
 
         platform = TargetPlatform.fetch(self.env, build.platform)
         # Platform may or may not exist anymore - get safe name for logging
@@ -319,10 +321,10 @@ class BuildQueue(object):
             return True
 
         # Ignore pending builds for deactived build configs
-        if not config.active:
+        if not (config and config.active):
             self.log.info('Dropping build of configuration "%s" at '
                      'revision [%s] on %s because the configuration is '
-                     'deactivated', config.name, build.rev, platform_name)
+                     'deactivated', config_name, build.rev, platform_name)
             return True
 
         # Stay within the revision limits of the build config
