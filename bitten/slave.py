@@ -34,6 +34,7 @@ from bitten.build import BuildError
 from bitten.build.config import Configuration, ConfigFileNotFound
 from bitten.recipe import Recipe
 from bitten.util import xmlio
+from bitten.util.compat import HTTPBasicAuthHandler
 
 EX_OK = getattr(os, "EX_OK", 0)
 EX_UNAVAILABLE = getattr(os, "EX_UNAVAILABLE", 69)
@@ -262,7 +263,7 @@ class BuildSlave(object):
 
     def _get_opener(self):
         opener = urllib2.build_opener(urllib2.HTTPErrorProcessor())
-        opener.add_handler(urllib2.HTTPBasicAuthHandler(self.password_mgr))
+        opener.add_handler(HTTPBasicAuthHandler(self.password_mgr))
         opener.add_handler(urllib2.HTTPDigestAuthHandler(self.password_mgr))
         opener.add_handler(urllib2.HTTPCookieProcessor(self.cookiejar))
         return opener
