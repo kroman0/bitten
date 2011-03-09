@@ -25,7 +25,6 @@ import time
 import re
 import cookielib
 import threading
-import os
 import mimetools
 from ConfigParser import MissingSectionHeaderError
 
