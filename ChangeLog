@@ -4,6 +4,18 @@ http://svn.edgewall.org/repos/bitten/tags/0.7
 
  * ???
 
+Version 0.6
+(11 March 2011, from 0.6.x branch)
+http://svn.edgewall.org/repos/bitten/tags/0.6
+
+ * Compatibility fix for Python 2.6 HTTPBasicAuthHandler issues.
+ * When checking to delete pending build, handle case where config may not
+   exist.
+ * Set 'Content-Length' header on keep-alive requests.
+ * Make sure slave reads attachments as binary files.
+ * Fixed handling of configurations that point to deleted branches.
+ * Fix hg:pull command for Trac 0.12.
+
 Version 0.6b3
 (21 October 2010, from 0.6.x branch)
 http://svn.edgewall.org/repos/bitten/tags/0.6b3
