@@ -136,6 +136,7 @@ setup(
                   "bitten.recipe",
                   "bitten.slave",
                   "bitten.util.__init__",
+                  "bitten.util.compat",
                   "bitten.util.loc",
                   "bitten.util.testrunner",
                   "bitten.util.xmlio",
