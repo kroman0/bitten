@@ -504,7 +504,7 @@ class BuildSlave(object):
         form_token = recipe._root.attr.get('form_token', '')
         if self.local or self.dry_run or not form_token:
             log.info('Attachment %s not sent due to current slave options',
-                        attachment.attr['file'])
+                        attachment.attr['filename'])
             return
         resource_type = attachment.attr['resource']
         url = str(build_url + '/attach/' + resource_type)
