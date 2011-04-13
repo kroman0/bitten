@@ -4,6 +4,15 @@ http://svn.edgewall.org/repos/bitten/tags/0.7
 
  * ???
 
+
+Version 0.6.1
+(???, from 0.6.x branch)
+http://svn.edgewall.org/repos/bitten/tags/0.6.1
+
+ * Fix bug in error reporting in the `<x:transform />` recipe command when
+   using the Windows MSXML implementation.
+
+
 Version 0.6
 (11 March 2011, from 0.6.x branch)
 http://svn.edgewall.org/repos/bitten/tags/0.6
@@ -15,6 +24,7 @@ http://svn.edgewall.org/repos/bitten/tags/0.6
  * Make sure slave reads attachments as binary files.
  * Fixed handling of configurations that point to deleted branches.
  * Fix hg:pull command for Trac 0.12.
+
 
 Version 0.6b3
 (21 October 2010, from 0.6.x branch)
