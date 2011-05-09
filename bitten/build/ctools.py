@@ -61,7 +61,7 @@ def configure(ctxt, file_='configure', enable=None, disable=None, with_=None,
     if cxxflags:
         args.append('CXXFLAGS=%s' % cxxflags)
     if prefix:
-        args.append('--prefix=%ss' % prefix)
+        args.append('--prefix=%s' % prefix)
 
     from bitten.build import shtools
     returncode = shtools.execute(ctxt, file_=file_, args=args)
