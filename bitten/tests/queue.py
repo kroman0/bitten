@@ -450,6 +450,18 @@ class BuildQueueTestCase(unittest.TestCase):
         platforms = queue.match_slave('foo', {'family': 'nt'})
         self.assertEqual([], platforms)
 
+    def test_register_slave_match_case_insensitive(self):
+        BuildConfig(self.env, 'test', active=True).insert()
+        platform = TargetPlatform(self.env, config='test', name="Unix")
+        platform.rules.append(('os', 'LiNUX'))
+        platform.insert()
+        platform_id = platform.id
+
+        queue = BuildQueue(self.env)
+        platforms = queue.match_slave('foo', {'os': 'linux'})
+        self.assertEqual(1, len(platforms))
+        self.assertEqual(platform_id, platforms[0].id)
+
     def test_register_slave_match_regexp(self):
         BuildConfig(self.env, 'test', active=True).insert()
         platform = TargetPlatform(self.env, config='test', name="Unix")
