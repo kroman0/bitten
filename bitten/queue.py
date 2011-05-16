@@ -184,7 +184,8 @@ class BuildQueue(object):
                 for propname, pattern in ifilter(None, platform.rules):
                     try:
                         propvalue = properties.get(propname)
-                        if not propvalue or not re.match(pattern, propvalue):
+                        if not propvalue or not re.match(pattern,
+                                                         propvalue, re.I):
                             match = False
                             break
                     except re.error:
