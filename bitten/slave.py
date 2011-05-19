@@ -222,9 +222,15 @@ class BuildSlave(object):
         :param form_auth: login using AccountManager HTML form instead of
                                 HTTP authentication for all urls
         """
-        self.urls = urls
         self.local = len(urls) == 1 and not urls[0].startswith('http://') \
                                     and not urls[0].startswith('https://')
+        if self.local:
+            self.urls = urls
+        else:
+            self.urls = [
+                not url.endswith('/builds') and url.rstrip('/') + '/builds'
+                or url for url in urls]
+
         if name is None:
             name = platform.node().split('.', 1)[0].lower()
         self.name = name
@@ -255,7 +261,7 @@ class BuildSlave(object):
                 password = password \
                            or self.config['authentication.password'] or ''
                 self.config.packages.pop('authentication', None)
-                urls = [url[:-7] for url in urls]
+                urls = [url[:-len('/builds')] for url in self.urls]
                 self.password_mgr.add_password(
                                 None, urls, self.username, password)
                 self.auth_map = dict(map(lambda x: (x, False), urls))
