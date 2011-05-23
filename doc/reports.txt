@@ -121,6 +121,9 @@ Lint issues are placed inside ``<problem />`` elements, with allowed attributes 
 |                 | ``convention \| warning \| refactor \| error``           |
 +-----------------+----------------------------------------------------------+
 
+Each ``<problem />`` elements may contain a ``<msg>`` element whose
+text is the issue description reported by pylint.
+
 Example:
 
 .. code-block:: xml
@@ -130,6 +133,6 @@ Example:
                 line="17"
                 tag="TestResultsChartGenerator"
                 file="bitten/report/testing.py">
-            Missing docstring
+            <msg>Missing docstring</msg>
         </problem>
     </report>
