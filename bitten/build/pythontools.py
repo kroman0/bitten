@@ -173,7 +173,7 @@ def pylint(ctxt, file_=None):
                     problems.append(xmlio.Element('problem', category=category,
                                                   type=msg_type, tag=tag,
                                                   line=lineno, file=filename)[
-                        match.group('msg') or ''
+                        xmlio.Element('msg')[match.group('msg') or '']
                     ])
             ctxt.report('lint', problems)
         finally:

@@ -210,6 +210,26 @@ class PyLintTestCase(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.basedir)
 
+    def test_summary_format(self):
+        # thoroughly check on report line
+        self.summary.write("""
+%s/module/file1.py:42: [C] Missing docstring
+""" % (self.ctxt.basedir,))
+        self.summary.close()
+        pythontools.pylint(self.ctxt, file_=self.summary.name)
+        type, category, generator, xml = self.ctxt.output.pop()
+        self.assertEqual(Recipe.REPORT, type)
+        self.assertEqual('lint', category)
+        self.assertEqual(1, len(xml.children))
+        child = xml.children[0]
+        self.assertEqual('problem', child.name)
+        self.assertEqual('module/file1.py', child.attr['file'])
+        self.assertEqual(1, len(child.children))
+        msg = child.children[0]
+        self.assertEqual('msg', msg.name)
+        self.assertEqual(1, len(msg.children))
+        self.assertEqual('Missing docstring', msg.children[0])
+
     def test_summary_with_absolute_path(self):
         # One posix + one windows path to normalize
         self.summary.write("""
@@ -247,6 +267,7 @@ module\\file2.py:42: [C] Missing docstring
         child = xml.children[1]
         self.assertEqual('problem', child.name)
         self.assertEqual('module/file2.py', child.attr['file'])
+
 
 class FigleafTestCase(unittest.TestCase):
 
