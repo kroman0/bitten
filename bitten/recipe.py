@@ -268,7 +268,7 @@ class Recipe(object):
                      if not name.startswith('xmlns')])
         self.ctxt = Context(basedir, config, vars)
         self._root = xml
-    	self.onerror_default = vars.get('onerror', 'fail')
+        self.onerror_default = vars.get('onerror', 'fail')
         assert self.onerror_default in ('fail', 'ignore', 'continue')
 
     def __iter__(self):

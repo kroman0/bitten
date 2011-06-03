@@ -22,12 +22,12 @@
     
     <div py:def="build_time(build)" class="system">
       <py:choose>
-	<span py:when="build.stopped">
-	  <div>Duration: ${build.duration}</div>
-	</span>
-	<span py:otherwise="">
-	  <div>${build.started} (${build.started_delta} ago)</div>
-	</span>
+        <span py:when="build.stopped">
+          <div>Duration: ${build.duration}</div>
+        </span>
+        <span py:otherwise="">
+          <div>${build.started} (${build.started_delta} ago)</div>
+        </span>
       </py:choose>
     </div>
 
@@ -37,7 +37,7 @@
       <py:if test="slave.machine or slave.processor"> / </py:if>
       ${slave.processor or slave.machine or ''}
     </div>
-    
+
     <ul py:def="build_steps(steps)" py:if="steps" class="steps">
       <li py:for="step in steps"
           class="${step.cls}">
@@ -50,14 +50,25 @@
         </ul>
       </li>
     </ul>
- 
+
+    <div py:def="status_summary(config)" class="summary">
+      <p class="pending">
+        ${config.builds_pending} build<py:if test="config.builds_pending != 1">s</py:if> pending
+        <span py:if="'platforms' in config" class="detail">(<py:for
+          each="platform, sep in separated([p for p in config.platforms if p.builds_inprogress], ', ')">${platform.name}:
+          ${platform.builds_pending}$sep</py:for>)</span>
+      </p>
+      <p class="inprogress">
+        ${config.builds_inprogress or 'No'} build<py:if test="config.builds_inprogress != 1">s</py:if> in progress
+        <span py:if="'platforms' in config" class="detail">(<py:for
+          each="platform, sep in separated([p for p in config.platforms if p.builds_inprogress], ', ')">${platform.name}:
+          ${platform.builds_inprogress}$sep</py:for>)</span>
+      </p>
+    </div>
+
     <div id="content" class="build">
       <h1>$title</h1><py:choose test="page_mode"><py:when test="'overview'">
-      <py:if test="builds_pending">
-       <div>$builds_pending pending build<py:if test="builds_pending > 1">s</py:if>
-       </div></py:if><py:if test="builds_inprogress">
-       <div>$builds_inprogress in-progress build<py:if test="builds_inprogress > 1">s</py:if>
-      </div></py:if>
+      ${status_summary(dict(builds_pending=builds_pending, builds_inprogress=builds_inprogress))}
       <form id="prefs" method="get" action="">
         <div>
           <input type="checkbox" id="showall" name="show" value="all"
@@ -67,57 +78,48 @@
         <div class="buttons">
           <input type="submit" value="Update" />
         </div>
-      </form><py:for each="config in configs">
-      <h2 class="config ${not config.active and 'deactivated' or ''}">
-        <a href="$config.href">$config.label</a>
-      </h2><py:if test="config.builds_pending">
-        <div>$config.builds_pending pending
-          build<py:if test="config.builds_pending > 1">s</py:if>&nbsp;<i>(<py:for each="platform in config.platforms">
-        <py:if test="platform.builds_pending">
-          $platform.name: $platform.builds_pending
-        </py:if></py:for>)</i>
-       </div></py:if><py:if test="config.builds_inprogress">
-       <div>$config.builds_inprogress in-progress
-         build<py:if test="config.builds_inprogress > 1">s</py:if>&nbsp;<i>(<py:for each="platform in config.platforms"><py:if test="platform.builds_inprogress">
-            $platform.name: $platform.builds_inprogress
-          </py:if></py:for>)</i>
-      </div></py:if>
-      <div py:if="config.description" class="description">
-        $config.description
-      </div><py:if test="len(config.builds)">
-      <h3 class="builds"><a href="$config.href">Latest builds</a></h3>
-      <table class="builds"><tbody><tr>
-        <th py:with="youngest_rev = config.youngest_rev">
-          <a href="$youngest_rev.href">[$youngest_rev.display_rev]</a>
-          by ${format_author(youngest_rev.author)}<p class="date">$youngest_rev.date</p>
-          <p class="message">$youngest_rev.message</p>
-        </th>
-        <td py:for="build in config.builds" class="$build.cls"><py:choose>
-        <py:when test="build.status != 'pending'">
-          <a href="$build.href">$build.platform</a>
-          <p class="date">$build.stopped</p>
-          ${slave_info(build.slave)}
-          ${build_status(build.status)}
-        </py:when><py:otherwise>
-          <strong>$build.platform</strong>
-          <p class="nobuild">No build yet</p>
-        </py:otherwise></py:choose>
-        </td>
-      </tr></tbody></table></py:if></py:for>
+      </form>
+
+      <py:for each="config in configs">
+        <h2 class="config ${not config.active and 'deactivated' or ''}">
+          <a href="$config.href">$config.label</a>
+        </h2>
+        ${status_summary(config)}
+        <div py:if="config.description" class="description">
+          $config.description
+        </div><py:if test="len(config.builds)">
+        <h3 class="builds"><a href="$config.href">Latest builds</a></h3>
+        <table class="builds"><tbody><tr>
+          <th py:with="youngest_rev = config.youngest_rev">
+            <a href="$youngest_rev.href">[$youngest_rev.display_rev]</a>
+            by ${format_author(youngest_rev.author)}<p class="date">$youngest_rev.date</p>
+            <p class="message">$youngest_rev.message</p>
+          </th>
+          <td py:for="build in config.builds" class="$build.cls"><py:choose>
+          <py:when test="build.status != 'pending'">
+            <a href="$build.href">$build.platform</a>
+            <p class="date">$build.stopped</p>
+            ${slave_info(build.slave)}
+            ${build_status(build.status)}
+          </py:when><py:otherwise>
+            <strong>$build.platform</strong>
+            <p class="nobuild">No build yet</p>
+          </py:otherwise></py:choose>
+          </td>
+        </tr></tbody></table></py:if>
+      </py:for>
 
     </py:when><py:when test="'view_config'">
       <div id="charts"><py:for each="chart in config.charts">
         <h3 id="chart_${chart.category}_title" style="text-align: center;"/>
         <div id="chart_${chart.category}" style="${chart.style}"></div>
         <script type="text/javascript">
-          $(document).ready(function() { 
-               
-              $.getJSON('${chart.href}', function(json) { 
-                   
+          $(document).ready(function() {
+              $.getJSON('${chart.href}', function(json) {
                   $("#chart_${chart.category}_title").append(json.title);
                   json.options['xaxis']['tickFormatter'] = function(rev) { return "[" + rev + "]"; }; 
                   $.plot($("#chart_${chart.category}"), json.data, json.options); 
-              }); 
+              });
           });
         </script>
         <br /></py:for>
@@ -152,6 +154,7 @@
          <a href="$config.max_rev_href">[$config.max_rev]</a></py:if>)
         </py:if>
       </p>
+      ${status_summary(config)}
       <div py:if="config.description" class="description">
         $config.description
       </div>
@@ -159,16 +162,6 @@
         ${attach_file_form(config.attachments)}
       </div>
       ${list_of_attachments(config.attachments, compact=True)}
-      <py:if test="config.builds_pending">
-      <div>$config.builds_pending pending build<py:if test="config.builds_pending > 1">s</py:if>&nbsp;<i>(<py:for each="platform in config.platforms">
-        <py:if test="platform.builds_pending">
-          $platform.name: $platform.builds_pending
-        </py:if></py:for>)</i>
-       </div></py:if><py:if test="config.builds_inprogress">
-	<div>$config.builds_inprogress in-progress build<py:if test="config.builds_inprogress > 1">s</py:if>&nbsp;<i>(<py:for each="platform in config.platforms"><py:if test="platform.builds_inprogress">
-	$platform.name: $platform.builds_inprogress
-        </py:if></py:for>)</i>
-      </div></py:if>
 
       <table py:if="config.platforms and config.builds"
              class="listing" id="builds">
@@ -190,7 +183,7 @@
                   ${build_status(build.status)}
                 </a>
                 ${slave_info(build.slave)}
-		${build_time(build)}
+                ${build_time(build)}
               </div>
               ${build_steps(build.steps)}
             </td>
