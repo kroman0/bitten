@@ -6,6 +6,8 @@
   background-image: url(bitten_buildf.png) !important;
 }
 
+/* Build page */
+
 #content.build h2.config, #content.build h2.step { background: #f7f7f7;
   border-bottom: 1px solid #d7d7d7; margin: 2em 0 0; clear: both;
 }
@@ -56,6 +58,10 @@
 #content.build form.platforms ul { list-style-type: none; padding-left: 1em; }
 
 #content.build p.path { color: #999; font-size: smaller; margin-top: 0; }
+
+#content.build .summary { color: #666; font-size: smaller; margin-top: 1em; }
+#content.build .summary p { margin: 0; }
+#content.build .summary p .detail { color: #999; font-style: italic; }
 
 #content.build #charts { clear: right; float: right; margin-left: 0.5em; }
 
