@@ -559,7 +559,7 @@ def main():
                       help='the password to use when authenticating')
     def _ask_password(option, opt_str, value, parser):
         from getpass import getpass
-        parser.values.password = getpass('Passsword: ')
+        parser.values.password = getpass('Password: ')
     parser.add_option('-P', '--ask-password', action='callback',
                       callback=_ask_password, help='Prompt for password')
     parser.add_option('--form-auth', action='store_true', 
