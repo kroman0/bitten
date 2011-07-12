@@ -126,7 +126,7 @@ ORDER BY item_type.value""", (build.id, step.name))
         file_data = {}
 
         type_total = {}
-        category_total = {}
+        category_total = {'convention': 0, 'refactor': 0, 'warning': 0, 'error': 0}
         line_total = 0
         file_total = 0
         seen_files = {}
