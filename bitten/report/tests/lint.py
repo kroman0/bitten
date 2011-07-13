@@ -197,8 +197,12 @@ class PyLintChartSummarizerTestCase(unittest.TestCase):
                                          'refactor', 'warning', 'error',
                                          'refactor', 'error', 'refactor',
                                          'refactor']):
-            report.items.append({'category': category, 'file': 'foo.py',
-                                 'lines': line, 'type': 'unknown'})
+            item = {'category': category, 'file': 'foo.py', 'type': 'unknown'}
+            if line % 3 == 0:
+                item['line'] = line
+            if line % 2 == 0:
+                item['msg'] = 'error'
+            report.items.append(item)
         report.insert()
         summarizer = PyLintSummarizer(self.env)
         template, data = summarizer.render_summary(req, config, build, step,
@@ -209,7 +213,11 @@ class PyLintChartSummarizerTestCase(unittest.TestCase):
                            'catnames': ['warning', 'error', 'refactor',
                                         'convention'],
                            'lines': 10, 'href': '/browser/tmp/foo.py',
-                           'file': 'foo.py', 'type': {'unknown': 10}}],
+                           'file': 'foo.py', 'type': {'unknown': 10},
+                           'details': sorted([(i % 3 != 0 and '??' or i,
+                                               'unknown',
+                                               i % 2 != 0 and '-' or 'error')
+                                              for i in range(10)])}],
                          data['data'])
         self.assertEqual({'category': {'convention': 1, 'refactor': 4,
                                        'warning': 2, 'error': 3},
@@ -220,7 +228,7 @@ class PyLintChartSummarizerTestCase(unittest.TestCase):
                                                   {'data': data}, 'text/html',
                                                   fragment=True)
         stream = Stream(list(stream))
-        file_text = stream.select('//td[@class="file"]/a/text()').render()
+        file_text = stream.select('//tr[@class="file failed"]/th/a/text()').render()
         self.assertEqual("foo.py", file_text)
         for i, (category, cnt) in enumerate([
                 ("Convention", 1), ("Refactor", 4),
@@ -232,7 +240,7 @@ class PyLintChartSummarizerTestCase(unittest.TestCase):
             self.assertEqual(str(cnt), text, "Expected total for %r to have "
                              "value '%d' but got %r" % (category, cnt, text))
             text_file = stream.select('//table/tbody[1]//td[%d]/text()'
-                                 % (i + 2)).render().strip()
+                                 % (i + 1)).render().strip()
             self.assertEqual(str(cnt), text_file, "Expected category %r for "
                              "foo.py to have value '%d' but got %r" %
                              (category, cnt, text_file))

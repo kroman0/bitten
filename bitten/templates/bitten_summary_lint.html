@@ -19,11 +19,15 @@
  </thead>
 
  <tbody><py:for each="item in data.data">
- <tr>
-    <td class="file">
-    <a py:if="item.href" href="${item.href}">$item.file</a>
-    <span py:if="not item.href">$item.file</span>
-    </td>
+ <tr class="file ${item.details and 'failed' or 'success'}">
+    <th>
+      <span class="reportitem" />
+      <a py:if="item.href" href="${item.href}">$item.file</a>
+      <span py:if="not item.href">$item.file</span>
+      <p class="details" style="padding: 0" py:for="line, type, msg in item.details">
+        <span>$line: [$type] $msg</span>
+      </p>
+    </th>
 
     <td class="category">$item.category.convention</td>
     <td class="category">$item.category.refactor</td>
@@ -31,7 +35,7 @@
     <td class="category">$item.category.error</td>
     <td class="category">$item.lines</td>
 
-  </tr>
+ </tr>
  </py:for>
  </tbody>
  <tbody class="totals" py:with="totals = data.totals"><tr>
