@@ -1,0 +1,22 @@
+#content.build table.lint tr.failed th,
+#content.build table.lint tr.failed td { font-weight: bold; }
+#content.build table.lint tr.failed :link,
+#content.build table.lint tr.failed :visited { color: #b00 }
+
+/* collapsible failure details */
+#content.build table.lint tr th p { margin: 0; padding: 0; text-align: left; }
+#content.build table.lint tr th p.details {
+  margin: 0; padding-left: 4px; padding-top: 5px; text-align: left; font-weight: normal;
+}
+#content.build table.lint tr th p.details span {
+  white-space: pre; font-family: monospace; font-weight: normal; font-size: smaller;
+  color: #666;
+}
+#content.build table.lint .reportitem { display: inline-block; }
+#content.build table.lint tr.failed th .reportitem a {
+  background: url(../common/expanded.png) 50% 50% no-repeat; padding-left: 16px;
+}
+#content.build table.lint tr.failed th.collapsed .reportitem a {
+  background-image: url(../common/collapsed.png);
+}
+#content.build table.lint tr.failed th.collapsed p.details { display: none; }

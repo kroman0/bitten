@@ -12,8 +12,18 @@ import unittest
 
 from trac.db import DatabaseManager
 from trac.test import EnvironmentStub, Mock
+from trac.web.href import Href
+from trac.web.chrome import Chrome
 from bitten.model import *
-from bitten.report.lint import PyLintChartGenerator
+from bitten.report.lint import PyLintChartGenerator, PyLintSummarizer
+from bitten.web_ui import BittenChrome
+from genshi import Stream
+
+
+def MockRequest():
+    return Mock(method='GET', chrome={},
+                href=Href('/'), perm=(), tz=None, abs_href=Href('/'),
+                authname=None, form_token=None, session=None)
 
 
 class PyLintChartGeneratorTestCase(unittest.TestCase):
@@ -120,6 +130,120 @@ class PyLintChartGeneratorTestCase(unittest.TestCase):
         self.assertEqual(1, actual_data[3]['data'][0][1])
         self.assertEqual('Warning', actual_data[4]['label'])
         self.assertEqual(1, actual_data[4]['data'][0][1])
+
+
+class PyLintChartSummarizerTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.env = EnvironmentStub(enable=['trac.*', 'bitten.*'])
+        self.env.path = ''
+
+        db = self.env.get_db_cnx()
+        cursor = db.cursor()
+        connector, _ = DatabaseManager(self.env)._get_connector()
+        for table in schema:
+            for stmt in connector.to_sql(table):
+                cursor.execute(stmt)
+
+        BittenChrome(self.env)
+
+    def test_supported_categories(self):
+        summarizer = PyLintSummarizer(self.env)
+        self.assertEqual(['lint'], summarizer.get_supported_categories())
+
+    def test_no_reports(self):
+        req = MockRequest()
+        config = Mock(name='trunk', min_rev_time=lambda env: 0,
+                      max_rev_time=lambda env: 1000, path='tmp/')
+        build = Build(self.env, config='trunk', platform=1, rev=123,
+                      rev_time=42)
+        build.insert()
+        step = BuildStep(self.env, build=build.id, name='foo',
+                         status=BuildStep.SUCCESS)
+        step.insert()
+
+        summarizer = PyLintSummarizer(self.env)
+        template, data = summarizer.render_summary(req, config, build, step,
+                                                   'lint')
+        self.assertEqual('bitten_summary_lint.html', template)
+        self.assertEqual([], data['data'])
+        self.assertEqual({'category': {'convention': 0, 'refactor': 0,
+                                       'warning': 0, 'error': 0},
+                          'files': 0, 'lines': 0, 'type': {}}, data['totals'])
+
+        stream = Chrome(self.env).render_template(req, template,
+                                                  {'data': data}, 'text/html',
+                                                  fragment=True)
+        stream = Stream(list(stream))
+        for i, category in enumerate(("Convention", "Refactor", "Warning",
+                                      "Error", "Totals")):
+            text = stream.select('//tbody[@class="totals"]//td[%d]/text()'
+                                 % (i + 1)).render()
+            self.assertEqual('0', text, "Expected total for %r to have "
+                             "value '0' but got %r" % (category, text))
+
+    def test_basic_report(self):
+        req = MockRequest()
+        config = Mock(name='trunk', min_rev_time=lambda env: 0,
+                      max_rev_time=lambda env: 1000, path='tmp/')
+        build = Build(self.env, config='trunk', platform=1, rev=123,
+                      rev_time=42)
+        build.insert()
+        step = BuildStep(self.env, build=build.id, name='foo',
+                         status=BuildStep.SUCCESS)
+        step.insert()
+        report = Report(self.env, build=build.id, step='foo', category='lint')
+        for line, category in enumerate(['convention', 'warning', 'error',
+                                         'refactor', 'warning', 'error',
+                                         'refactor', 'error', 'refactor',
+                                         'refactor']):
+            item = {'category': category, 'file': 'foo.py', 'type': 'unknown'}
+            if line % 3 == 0:
+                item['line'] = line
+            if line % 2 == 0:
+                item['msg'] = 'error'
+            report.items.append(item)
+        report.insert()
+        summarizer = PyLintSummarizer(self.env)
+        template, data = summarizer.render_summary(req, config, build, step,
+                                                   'lint')
+        self.assertEqual('bitten_summary_lint.html', template)
+        self.assertEqual([{'category': {'warning': 2, 'error': 3,
+                                        'refactor': 4, 'convention': 1},
+                           'catnames': ['warning', 'error', 'refactor',
+                                        'convention'],
+                           'lines': 10, 'href': '/browser/tmp/foo.py',
+                           'file': 'foo.py', 'type': {'unknown': 10},
+                           'details': sorted([(i % 3 != 0 and '??' or i,
+                                               'unknown',
+                                               i % 2 != 0 and '-' or 'error')
+                                              for i in range(10)])}],
+                         data['data'])
+        self.assertEqual({'category': {'convention': 1, 'refactor': 4,
+                                       'warning': 2, 'error': 3},
+                          'files': 1, 'lines': 10, 'type': {'unknown': 10}},
+                         data['totals'])
+
+        stream = Chrome(self.env).render_template(req, template,
+                                                  {'data': data}, 'text/html',
+                                                  fragment=True)
+        stream = Stream(list(stream))
+        file_text = stream.select('//tr[@class="file failed"]/th/a/text()').render()
+        self.assertEqual("foo.py", file_text)
+        for i, (category, cnt) in enumerate([
+                ("Convention", 1), ("Refactor", 4),
+                ("Warning", 2), ("Error", 3),
+                ("Totals", 10)
+                ]):
+            text = stream.select('//tbody[@class="totals"]//td[%d]/text()'
+                                 % (i + 1)).render().strip()
+            self.assertEqual(str(cnt), text, "Expected total for %r to have "
+                             "value '%d' but got %r" % (category, cnt, text))
+            text_file = stream.select('//table/tbody[1]//td[%d]/text()'
+                                 % (i + 1)).render().strip()
+            self.assertEqual(str(cnt), text_file, "Expected category %r for "
+                             "foo.py to have value '%d' but got %r" %
+                             (category, cnt, text_file))
 
 
 def suite():

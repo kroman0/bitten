@@ -14,6 +14,7 @@
 __docformat__ = 'restructuredtext en'
 
 from trac.core import *
+from trac.web.chrome import add_stylesheet, add_script
 from bitten.api import IReportChartGenerator, IReportSummarizer
 
 
@@ -98,12 +99,16 @@ class PyLintSummarizer(Component):
 
     def render_summary(self, req, config, build, step, category):
         assert category == 'lint'
+        add_stylesheet(req, 'bitten/bitten_lint.css')
+        add_script(req, 'common/js/folding.js')
+        add_script(req, 'bitten/bitten_lint.js')
 
         db = self.env.get_db_cnx()
         cursor = db.cursor()
         cursor.execute("""
 SELECT item_type.value AS type, item_file.value AS file,
     item_line.value as line, item_category.value as category,
+    item_msg.value as msg,
     report.category as report_category
 FROM bitten_report AS report
  LEFT OUTER JOIN bitten_report_item AS item_type
@@ -115,25 +120,29 @@ FROM bitten_report AS report
  LEFT OUTER JOIN bitten_report_item AS item_line
   ON (item_line.report=report.id AND
     item_line.item=item_type.item AND
-    item_line.name='lines')
+    item_line.name='line')
  LEFT OUTER JOIN bitten_report_item AS item_category
   ON (item_category.report=report.id AND
     item_category.item=item_type.item AND
     item_category.name='category')
+ LEFT OUTER JOIN bitten_report_item AS item_msg
+  ON (item_msg.report=report.id AND
+    item_msg.item=item_type.item AND
+    item_msg.name='msg')
 WHERE report.category='lint' AND build=%s AND step=%s
-ORDER BY item_type.value""", (build.id, step.name))
+ORDER BY item_file.value, item_type.value""", (build.id, step.name))
 
         file_data = {}
 
         type_total = {}
-        category_total = {}
+        category_total = {'convention': 0, 'refactor': 0, 'warning': 0, 'error': 0}
         line_total = 0
         file_total = 0
         seen_files = {}
 
-        for type, file, line, category, report_category in cursor:
+        for type, file, line, category, msg, report_category in cursor:
             if not file_data.has_key(file):
-                file_data[file] = {'file': file, 'type': {}, 'lines': 0, 'category': {}}
+                file_data[file] = {'file': file, 'type': {}, 'lines': 0, 'category': {}, 'details': []}
 
             d = file_data[file]
             #d = {'type': type, 'line': line, 'category': category}
@@ -143,6 +152,14 @@ ORDER BY item_type.value""", (build.id, step.name))
 
             d['lines'] += 1
             line_total += 1
+
+            if line is not None and line.isdigit():
+                line = int(line)
+
+            d['details'].append((
+                    line is None and '??' or line,
+                    type is None and '??' or type,
+                    msg is None and '-' or msg))
 
             if not d['category'].has_key(category):
                 d['category'][category] = 0
@@ -166,6 +183,7 @@ ORDER BY item_type.value""", (build.id, step.name))
         data = []
         for d in file_data.values():
             d['catnames'] = d['category'].keys()
+            d['details'].sort()
             data.append(d)
 
         template_data = {}
